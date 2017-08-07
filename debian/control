@@ -1,0 +1,27 @@
+Source: gr-gsm
+Section: libdevel
+Priority: optional
+Maintainer: Debian Hamradio Maintainers <debian-hams@lists.debian.org>
+Uploaders: Petter Reinholtsen <pere@debian.org>,
+           A. Maitland Bottoms <bottoms@debian.org>
+Build-Depends: cmake,
+               debhelper (>= 9~),
+               gnuradio-dev,
+               libosmocore-dev,
+               pkg-config,
+               python-dev,
+               python-scipy,
+               swig
+X-Python-Version: >= 2.7, << 2.8
+Standards-Version: 4.0.1
+Homepage: http://github.com/ptrkrysik/gr-gsm/
+Vcs-Git: https://anonscm.debian.org/cgit/pkg-hamradio/gr-gsm.git
+Vcs-Browser: https://anonscm.debian.org/cgit/pkg-hamradio/gr-gsm.git
+
+Package: gr-gsm
+Architecture: any
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends},
+         gnuradio,
+         gr-osmosdr
+Description: Gnuradio blocks and tools for receiving GSM transmissions

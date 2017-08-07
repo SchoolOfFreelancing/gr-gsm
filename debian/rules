@@ -1,0 +1,26 @@
+#!/usr/bin/make -f
+
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+export DEB_HOST_MULTIARCH
+
+%:
+	dh $@ --with python2 --parallel
+
+override_dh_auto_configure:
+	dh_auto_configure -- -DLIB_SUFFIX="/$(DEB_HOST_MULTIARCH)" -DPythonLibs_FIND_VERSION:STRING="2.7" -DPYTHON_EXECUTABLE:STRING="/usr/bin/python"
+
+override_dh_auto_install:
+	dh_auto_install
+	rm -f debian/gr-gsm/usr/lib/python2.7/dist-packages/grgsm/*py[co]
+
+debian/copyright:
+	cme update dpkg-copyright
+
+VER:=$(shell dpkg-parsechangelog --show-field Version | sed -rne 's,^([^-]+).*,\1,p')
+GITREV:=$(shell echo $(VER) | sed -rne 's,[0-9]+\.[0-9]+\.[0-9]+\.([0-f]+),\1,p')
+
+get-orig-source:
+	git clone https://github.com/ptrkrysik/gr-gsm.git
+	cd gr-gsm && git archive --format=tar --prefix=gr-gsm-$(VER)/  $(GITREV) | \
+	  tar -f - --wildcards --delete '*/debian' | xz > ../gr-gsm_$(VER).orig.tar.xz
+	rm -rf gr-gsm
