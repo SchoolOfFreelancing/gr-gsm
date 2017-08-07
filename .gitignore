@@ -1,0 +1,10 @@
+build
+*.o
+*.log
+*~
+*.pyc
+*.pyo
+.unittests
+build/
+debian/tmp/
+debian/files
