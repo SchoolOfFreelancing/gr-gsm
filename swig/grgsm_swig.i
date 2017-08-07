@@ -16,14 +16,15 @@
 #include "grgsm/decryption/decryption.h"
 #include "grgsm/demapping/universal_ctrl_chans_demapper.h"
 #include "grgsm/demapping/tch_f_chans_demapper.h"
+#include "grgsm/flow_control/common.h"
 #include "grgsm/flow_control/burst_timeslot_splitter.h"
 #include "grgsm/flow_control/burst_sdcch_subslot_splitter.h"
 #include "grgsm/flow_control/burst_timeslot_filter.h"
 #include "grgsm/flow_control/burst_sdcch_subslot_filter.h"
 #include "grgsm/flow_control/burst_fnr_filter.h"
 #include "grgsm/flow_control/dummy_burst_filter.h"
+#include "grgsm/flow_control/uplink_downlink_splitter.h"
 #include "grgsm/misc_utils/bursts_printer.h"
-#include "grgsm/misc_utils/controlled_const_source_f.h"
 #include "grgsm/misc_utils/controlled_rotator_cc.h"
 #include "grgsm/misc_utils/extract_system_info.h"
 #include "grgsm/misc_utils/extract_immediate_assignment.h"
@@ -31,13 +32,16 @@
 #include "grgsm/misc_utils/tmsi_dumper.h"
 #include "grgsm/misc_utils/burst_file_sink.h"
 #include "grgsm/misc_utils/burst_file_source.h"
+#include "grgsm/misc_utils/collect_system_info.h"
+#include "grgsm/misc_utils/extract_cmc.h"
 #include "grgsm/qa_utils/burst_sink.h"
 #include "grgsm/qa_utils/burst_source.h"
 #include "grgsm/qa_utils/message_source.h"
 #include "grgsm/qa_utils/message_sink.h"
 #include "grgsm/misc_utils/message_file_sink.h"
 #include "grgsm/misc_utils/message_file_source.h"
-#include "grgsm/msg_to_tag.h"
+#include "grgsm/misc_utils/msg_to_tag.h"
+#include "grgsm/misc_utils/controlled_fractional_resampler_cc.h"
 %}
 
 %include "grgsm/receiver/receiver.h"
@@ -60,6 +64,7 @@ GR_SWIG_BLOCK_MAGIC2(gsm, universal_ctrl_chans_demapper);
 %include "grgsm/demapping/tch_f_chans_demapper.h"
 GR_SWIG_BLOCK_MAGIC2(gsm, tch_f_chans_demapper);
 
+%include "grgsm/flow_control/common.h"
 %include "grgsm/flow_control/burst_timeslot_splitter.h"
 GR_SWIG_BLOCK_MAGIC2(gsm, burst_timeslot_splitter);
 %include "grgsm/flow_control/burst_sdcch_subslot_splitter.h"
@@ -72,6 +77,9 @@ GR_SWIG_BLOCK_MAGIC2(gsm, burst_sdcch_subslot_filter);
 GR_SWIG_BLOCK_MAGIC2(gsm, burst_fnr_filter);
 %include "grgsm/flow_control/dummy_burst_filter.h"
 GR_SWIG_BLOCK_MAGIC2(gsm, dummy_burst_filter);
+%include "grgsm/flow_control/uplink_downlink_splitter.h"
+GR_SWIG_BLOCK_MAGIC2(grgsm, uplink_downlink_splitter);
+
 
 %include "grgsm/misc_utils/bursts_printer.h"
 GR_SWIG_BLOCK_MAGIC2(gsm, bursts_printer);
@@ -79,14 +87,14 @@ GR_SWIG_BLOCK_MAGIC2(gsm, bursts_printer);
 GR_SWIG_BLOCK_MAGIC2(gsm, burst_file_sink);
 %include "grgsm/misc_utils/burst_file_source.h"
 GR_SWIG_BLOCK_MAGIC2(gsm, burst_file_source);
+%include "grgsm/misc_utils/collect_system_info.h"
+GR_SWIG_BLOCK_MAGIC2(gsm, collect_system_info);
 %include "grgsm/misc_utils/extract_system_info.h"
 GR_SWIG_BLOCK_MAGIC2(gsm, extract_system_info);
 %include "grgsm/misc_utils/extract_immediate_assignment.h"
 GR_SWIG_BLOCK_MAGIC2(gsm, extract_immediate_assignment);
 %include "grgsm/misc_utils/controlled_rotator_cc.h"
 GR_SWIG_BLOCK_MAGIC2(gsm, controlled_rotator_cc);
-%include "grgsm/misc_utils/controlled_const_source_f.h"
-GR_SWIG_BLOCK_MAGIC2(gsm, controlled_const_source_f);
 %include "grgsm/misc_utils/message_printer.h"
 GR_SWIG_BLOCK_MAGIC2(gsm, message_printer);
 %include "grgsm/misc_utils/tmsi_dumper.h"
@@ -95,6 +103,13 @@ GR_SWIG_BLOCK_MAGIC2(gsm, tmsi_dumper);
 GR_SWIG_BLOCK_MAGIC2(gsm, message_file_sink);
 %include "grgsm/misc_utils/message_file_source.h"
 GR_SWIG_BLOCK_MAGIC2(gsm, message_file_source);
+%include "grgsm/misc_utils/msg_to_tag.h"
+GR_SWIG_BLOCK_MAGIC2(gsm, msg_to_tag);
+%include "grgsm/misc_utils/controlled_fractional_resampler_cc.h"
+GR_SWIG_BLOCK_MAGIC2(gsm, controlled_fractional_resampler_cc);
+%include "grgsm/misc_utils/extract_cmc.h"
+GR_SWIG_BLOCK_MAGIC2(gsm, extract_cmc);
+
 
 %include "grgsm/qa_utils/burst_sink.h"
 GR_SWIG_BLOCK_MAGIC2(gsm, burst_sink);
@@ -104,5 +119,3 @@ GR_SWIG_BLOCK_MAGIC2(gsm, burst_source);
 GR_SWIG_BLOCK_MAGIC2(gsm, message_source);
 %include "grgsm/qa_utils/message_sink.h"
 GR_SWIG_BLOCK_MAGIC2(gsm, message_sink);
-%include "grgsm/msg_to_tag.h"
-GR_SWIG_BLOCK_MAGIC2(grgsm, msg_to_tag);

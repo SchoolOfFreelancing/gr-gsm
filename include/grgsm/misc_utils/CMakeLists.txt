@@ -24,12 +24,15 @@ install(FILES
     bursts_printer.h
     burst_file_source.h
     burst_file_sink.h
+    collect_system_info.h
     message_file_sink.h
     message_file_source.h
     extract_system_info.h
     extract_immediate_assignment.h
+    extract_cmc.h
     controlled_rotator_cc.h
-    controlled_const_source_f.h
     message_printer.h
-    tmsi_dumper.h DESTINATION include/grgsm/misc_utils
+    tmsi_dumper.h
+    msg_to_tag.h
+    controlled_fractional_resampler_cc.h DESTINATION include/grgsm/misc_utils
 )
