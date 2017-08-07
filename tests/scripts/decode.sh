@@ -7,7 +7,7 @@ export CAPFILE="../../test_data/vf_call6_a725_d174_g5_Kc1EF00BAB3BAC7002.cfile"
 export SHORTENED_CAPFILE="tmp.cfile"
 export RESULT_EXPECTED="../fixtures/grgsm_decode_test1_expected"
 export RESULT_OBTAINED="grgsm_decode_test1_result"
-export RUNLINE="$AP_DECODE -c $SHORTENED_CAPFILE -s $((100000000/174)) -m BCCH -t 0 -v "
+export RUNLINE="$AP_DECODE -c $SHORTENED_CAPFILE -s $((100000000/174)) -m BCCH -t 0 -v --ppm -10"
 echo "Testing with:"
 echo "  $RUNLINE"
 gnuradio-companion --version
@@ -15,7 +15,7 @@ gnuradio-companion --version
 cd $TEST_DIR
 cat $CAPFILE | head -c 6000000 > $SHORTENED_CAPFILE
 
-$RUNLINE | tail -n +4 | tee $RESULT_OBTAINED
+$RUNLINE | grep -A 999999 "860933 1329237:  59 06 1a 8f 6d 18 10 80 00 00 00 00 00 00 00 00 00 00 00 78 b9 00 00" | tee $RESULT_OBTAINED
 diff $RESULT_EXPECTED $RESULT_OBTAINED
 TEST_RESULT=$?
 
@@ -30,3 +30,4 @@ else
   echo "   Result: FAILED"
   exit 1
 fi
+

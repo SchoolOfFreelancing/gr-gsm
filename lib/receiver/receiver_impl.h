@@ -36,6 +36,7 @@ namespace gr {
      private:
         unsigned int d_c0_burst_start;
         float d_c0_signal_dbm;
+        
         /**@name Configuration of the receiver */
         //@{
         const int d_OSR; ///< oversampling ratio
@@ -107,7 +108,6 @@ namespace gr {
          * @return true if frequency offset was faound
          */
         double compute_freq_offset(const gr_complex * input, unsigned first_sample, unsigned last_sample);
-
         /** Computes angle between two complex numbers
          *
          * @param val1 first complex number

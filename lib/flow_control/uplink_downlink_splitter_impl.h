@@ -20,31 +20,24 @@
  * 
  */
 
-#ifndef INCLUDED_GRGSM_MSG_TO_TAG_IMPL_H
-#define INCLUDED_GRGSM_MSG_TO_TAG_IMPL_H
+#ifndef INCLUDED_GRGSM_UPLINK_DOWNLINK_SPLITTER_IMPL_H
+#define INCLUDED_GRGSM_UPLINK_DOWNLINK_SPLITTER_IMPL_H
 
-#include <grgsm/msg_to_tag.h>
+#include <grgsm/flow_control/uplink_downlink_splitter.h>
 
 namespace gr {
   namespace grgsm {
 
-    class msg_to_tag_impl : public msg_to_tag
+    class uplink_downlink_splitter_impl : public uplink_downlink_splitter
     {
-     private:
-      // Nothing to declare in this block.
-
      public:
-      msg_to_tag_impl();
-      ~msg_to_tag_impl();
+      uplink_downlink_splitter_impl();
+      ~uplink_downlink_splitter_impl();
 
-      // Where all the action really happens
-      int work(int noutput_items,
-         gr_vector_const_void_star &input_items,
-         gr_vector_void_star &output_items);
+      void process_msg(pmt::pmt_t msg);
     };
-
   } // namespace grgsm
 } // namespace gr
 
-#endif /* INCLUDED_GRGSM_MSG_TO_TAG_IMPL_H */
+#endif /* INCLUDED_GRGSM_UPLINK_DOWNLINK_SPLITTER_IMPL_H */
 
