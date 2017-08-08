@@ -12,6 +12,8 @@ override_dh_auto_configure:
 override_dh_auto_install:
 	dh_auto_install
 	rm -f debian/gr-gsm/usr/lib/python2.7/dist-packages/grgsm/*py[co]
+	# Avoid language extention, see also https://github.com/ptrkrysik/gr-gsm/pull/301
+	for f in debian/gr-gsm/usr/bin/*.py; do mv $$f $${f%.py}; done
 
 debian/copyright:
 	cme update dpkg-copyright
