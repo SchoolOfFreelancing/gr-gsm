@@ -1,57 +1,22 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: gr-gsm
+Upstream-Contact: Piotr Krysik <ptrkrysik@gmail.com>
+Source: http://github.com/ptrkrysik/gr-gsm/
 
 Files: *
-Copyright: no-info-found
-License: GPL-3+
-
-Files: docs/*
-Copyright: 2004, 2008-2012, Free Software Foundation, Inc.
+Copyright: 2014-2017, Piotr Krysik <ptrkrysik@gmail.com>
 License: GPL-3+
 
 Files: lib/decoding/*
-Copyright: 2012-2014, Range Networks, Inc.
-License: UNKNOWN
- Please fill license UNKNOWN from header of lib/decoding/*
-
-Files: lib/decoding/BitVector.cpp
-  lib/decoding/BitVector.h
-  lib/decoding/Vector.h
-  lib/decoding/ViterbiR204.cpp
-  lib/decoding/ViterbiR204.h
-Copyright: 2014, Range Networks, Inc.
-  2008, 2009, 2014, Free Software Foundation, Inc.
-License: AGPL-3+
- Please fill license AGPL-3+ from header of lib/decoding/BitVector.cpp lib/decoding/BitVector.h lib/decoding/Vector.h lib/decoding/ViterbiR204.cpp lib/decoding/ViterbiR204.h
-
-Files: lib/decoding/GSM610Tables.cpp
-  lib/decoding/GSM610Tables.h
-Copyright: 2004, 2008-2012, Free Software Foundation, Inc.
+Copyright: 2014-2017, Piotr Krysik <ptrkrysik@gmail.com>
+  2012-2014, Range Networks, Inc.
+  2010, Sylvain Munaut <tnt@246tNt.com>
+  2004, 2008-2014, Free Software Foundation, Inc.
 License: GPL-3+
 
-Files: lib/decoding/GSM660Tables.cpp
-  lib/decoding/GSM660Tables.h
-Copyright: 2010, Sylvain Munaut <tnt@246tNt.com>
-License: GPL-3+
-
-Files: lib/decoding/control_channels_decoder_impl.cc
-  lib/decoding/control_channels_decoder_impl.h
-  lib/decoding/tch_f_decoder_impl.cc
-  lib/decoding/tch_f_decoder_impl.h
-Copyright: no-info-found
-License: GPL-3+
-
-Files: lib/decryption/*
-Copyright: 2014
-License: GPL-3+
-
-Files: python/__init__.py
-  python/build_utils.py
-  python/build_utils_codes.py
-Copyright: 2004, 2008-2012, Free Software Foundation, Inc.
-License: GPL-3+
-
-Files: python/receiver/*
-Copyright: 2014, Piotr Krysik <ptrkrysik@gmail.com>
+Files: debian/*
+Copyright: 2017, Petter Reinholdtsen <pere@hungry.com>
+  2014-2017, Piotr Krysik <ptrkrysik@gmail.com>
 License: GPL-3+
 
 License: GPL-3+
