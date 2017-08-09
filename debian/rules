@@ -15,7 +15,7 @@ override_dh_auto_install:
 	# Avoid language extention, see also https://github.com/ptrkrysik/gr-gsm/pull/301
 	for f in debian/gr-gsm/usr/bin/*.py; do mv $$f $${f%.py}; done
 	# This file is fetched from libjs-jquery instead, see gr-gsm.links
-	rm -f debian/gr-gsm/usr/share/doc/gr-grgsm/html/jquery.js
+	rm -f debian/gr-gsm/usr/share/doc/gr-gsm/html/jquery.js
 
 # Disable build test until the test become more robust
 override_dh_auto_test:
