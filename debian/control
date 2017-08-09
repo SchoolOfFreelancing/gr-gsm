@@ -22,6 +22,7 @@ Package: gr-gsm
 Architecture: any
 Pre-Depends: ${misc:Pre-Depends}
 Depends: ${misc:Depends}, ${python:Depends}, ${shlibs:Depends},
+         libjs-jquery,
          gnuradio,
          gr-osmosdr
 Description: Gnuradio blocks and tools for receiving GSM transmissions
