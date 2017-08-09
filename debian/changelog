@@ -1,5 +1,12 @@
-gr-gsm (0.0.20170807.6c4304d-1) UNRELEASED; urgency=low
+gr-gsm (0.0.20170807.6c4304d-1) unstable; urgency=medium
 
-  * Initial upload (Closes: #871055).
+  * Initial upload based on Debian packaging from upstream (Closes: #871055).
+  * Clean up d/copyright after reading the source.
+  * Added extended package description.
+  * Added 2000-no-compat-symlinks.patch to avoid compatibility symlinks in binary package.
+  * Renamed programs after installation to avoid the .py file ending.
+  * Disabled automatic testing during build until it start working.
+  * Made sure to use jquery from libjs-jquery.
+  * Added 2010-cmake-project-name.patch to correct documentation path.
 
- -- Petter Reinholdtsen <pere@debian.org>  Mon, 07 Aug 2017 23:18:36 +0200
+ -- Petter Reinholdtsen <pere@debian.org>  Wed, 09 Aug 2017 22:34:52 +0200
