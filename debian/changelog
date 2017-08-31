@@ -1,3 +1,13 @@
+gr-gsm (0.0.20170831.1e8a03c-1) unstable; urgency=medium
+
+  * New upstream version from packaging branch.
+  * Removed upstream merged patches 2000-no-compat-symlinks.patch
+    and 2010-cmake-project-name.patch.
+  * Updated d/copyright based on source code headers.
+  * Removed header files in the binary package until the ABI is stable.
+
+ -- Petter Reinholdtsen <pere@debian.org>  Thu, 31 Aug 2017 20:54:26 +0000
+
 gr-gsm (0.0.20170807.6c4304d-1) unstable; urgency=medium
 
   * Initial upload based on Debian packaging from upstream (Closes: #871055).
