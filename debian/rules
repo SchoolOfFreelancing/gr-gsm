@@ -14,6 +14,8 @@ override_dh_auto_install:
 	rm -f debian/gr-gsm/usr/lib/python2.7/dist-packages/grgsm/*py[co]
 	# This file is fetched from libjs-jquery instead, see gr-gsm.links
 	rm -f debian/gr-gsm/usr/share/doc/gr-gsm/html/jquery.js
+	# Deter anyone from using the shared library directly
+	rm -rf debian/gr-gsm/usr/include
 
 # The test suite have race conditions when running in parallel, see
 # <URL: https://github.com/ptrkrysik/gr-gsm/issues/324 >
