@@ -4,20 +4,59 @@ Upstream-Contact: Piotr Krysik <ptrkrysik@gmail.com>
 Source: http://github.com/ptrkrysik/gr-gsm/
 
 Files: *
-Copyright: 2014-2017, Piotr Krysik <ptrkrysik@gmail.com>
+Copyright: 2009-2017, Piotr Krysik <ptrkrysik@gmail.com>
+           2017, Vadim Yanitskiy <axilirator@gmail.com>
+           2015-2017, Roman Khassraf <rkhassraf@gmail.com>
+           2015, Pieter Robyns <pieter.robyns@uhasselt.be>
 License: GPL-3+
 
 Files: lib/decoding/*
 Copyright: 2014-2017, Piotr Krysik <ptrkrysik@gmail.com>
+  2015, Roman Khassraf <rkhassraf@gmail.com>
   2012-2014, Range Networks, Inc.
   2010, Sylvain Munaut <tnt@246tNt.com>
   2004, 2008-2014, Free Software Foundation, Inc.
+License: AGPL-3.0+
+
+Files:     lib/decoding/tch_f_decoder_impl.cc
+Copyright: 2017 Piotr Krysik <ptrkrysik@gmail.com>
+License:   GPL-3+
+
+Files: lib/decoding/osmocom/coding/*
+Copyright: 2013 Andreas Eversberg <jolly@eversberg.eu>
+           2015 Alexander Chemeris <Alexander.Chemeris@fairwaves.co>
+           2016 Tom Tsou <tom.tsou@ettus.com>
+           2016 sysmocom s.f.m.c. GmbH
+License: GPL-2.0+
+
+Files: lib/decoding/osmocom/coding/gsm0503_conv.c
+Copyright: 2011-2016 Sylvain Munaut <tnt@246tNt.com>
+           2016 sysmocom s.f.m.c. GmbH
 License: GPL-3+
 
 Files: debian/*
 Copyright: 2017, Petter Reinholdtsen <pere@hungry.com>
   2014-2017, Piotr Krysik <ptrkrysik@gmail.com>
 License: GPL-3+
+
+License: GPL-2.0+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or (at
+ your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ 02110-1301 USA.
+ .
+ On Debian systems, the complete text of version 3 of the GNU General
+ Public License can be found in '/usr/share/common-licenses/GPL-2'.
 
 License: GPL-3+
  This program is free software; you can redistribute it and/or modify
@@ -27,3 +66,17 @@ License: GPL-3+
  .
  On Debian systems, the complete text of version 3 of the GNU General
  Public License can be found in '/usr/share/common-licenses/GPL-3'.
+
+License: AGPL-3.0+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Affero General Public License for more details.
+ .
+ You should have received a copy of the GNU Affero General Public License
+ along with this program. If not, see <http://www.gnu.org/licenses/>.
