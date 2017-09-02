@@ -24,12 +24,3 @@ override_dh_auto_test:
 
 debian/copyright:
 	cme update dpkg-copyright
-
-VER:=$(shell dpkg-parsechangelog --show-field Version | sed -rne 's,^([^-]+).*,\1,p')
-GITREV:=$(shell echo $(VER) | sed -rne 's,[0-9]+\.[0-9]+\.[0-9]+\.([0-f]+),\1,p')
-
-get-orig-source:
-	git clone https://github.com/ptrkrysik/gr-gsm.git
-	cd gr-gsm && git archive --format=tar --prefix=gr-gsm-$(VER)/  $(GITREV) | \
-	  tar -f - --wildcards --delete '*/debian' | xz > ../gr-gsm_$(VER).orig.tar.xz
-	rm -rf gr-gsm
