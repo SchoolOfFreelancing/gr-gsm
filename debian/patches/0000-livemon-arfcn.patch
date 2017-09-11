@@ -1,0 +1,1037 @@
+Description: Make sure livemon report arfcn in gsmtap header
+ Calculate arfcn number based on the selected frequency.
+Origin: commit 3dfa11b89e6a74e6857c11e3029b372c746d535f
+Forwarded: no-need
+Reviewed-By: Petter Reinholdtsen <pere@hungry.com>
+Last-Update: 2017-09-06
+Author: Piotr Krysik <ptrkrysik@gmail.com>
+Date:   Wed Sep 6 17:48:38 2017 +0200
+
+    Making arfcn<->freq conversions more robust and uptading apps depending on it
+
+diff --git a/apps/grgsm_livemon_headless b/apps/grgsm_livemon_headless
+index dc36fca..721bc11 100644
+--- a/apps/grgsm_livemon_headless
++++ b/apps/grgsm_livemon_headless
+@@ -1,11 +1,31 @@
+ #!/usr/bin/env python2
+ # -*- coding: utf-8 -*-
++# @file
++# @author (C) 2017 by Piotr Krysik <ptrkrysik@gmail.com>
++# @section LICENSE
++#
++# Gr-gsm is free software; you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 3, or (at your option)
++# any later version.
++#
++# Gr-gsm is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with gr-gsm; see the file COPYING.  If not, write to
++# the Free Software Foundation, Inc., 51 Franklin Street,
++# Boston, MA 02110-1301, USA.
++#
++#
+ ##################################################
+ # GNU Radio Python Flow Graph
+ # Title: Gr-gsm Livemon
+ # Author: Piotr Krysik
+ # Description: Interactive monitor of a single C0 channel with analysis performed by Wireshark (command to run wireshark: sudo wireshark -k -f udp -Y gsmtap -i lo)
+-# Generated: Mon Aug 28 10:09:07 2017
++# Generated: Wed Sep  6 16:27:23 2017
+ ##################################################
+ 
+ from gnuradio import blocks
+@@ -13,6 +33,7 @@ from gnuradio import eng_notation
+ from gnuradio import gr
+ from gnuradio.eng_option import eng_option
+ from gnuradio.filter import firdes
++from grgsm import arfcn
+ from math import pi
+ from optparse import OptionParser
+ import grgsm
+@@ -23,7 +44,7 @@ import time
+ 
+ class grgsm_livemon_headless(gr.top_block):
+ 
+-    def __init__(self, args="", collector='localhost', collectorport='4729', fc=941.8e6, gain=30, osr=4, ppm=0, samp_rate=2000000.052982, serverport='4729', shiftoff=400e3):
++    def __init__(self, args="", collector="localhost", collectorport="4729", gain=30, osr=4, ppm=0, rec_len=1000000, samp_rate=2000000.052982, serverport="4729", shiftoff=400e3, fc=957e6):
+         gr.top_block.__init__(self, "Gr-gsm Livemon")
+ 
+         ##################################################
+@@ -32,13 +53,14 @@ class grgsm_livemon_headless(gr.top_block):
+         self.args = args
+         self.collector = collector
+         self.collectorport = collectorport
+-        self.fc = fc
+         self.gain = gain
+         self.osr = osr
+         self.ppm = ppm
++        self.rec_len = rec_len
+         self.samp_rate = samp_rate
+         self.serverport = serverport
+         self.shiftoff = shiftoff
++        self.fc = fc
+ 
+         ##################################################
+         # Blocks
+@@ -53,13 +75,13 @@ class grgsm_livemon_headless(gr.top_block):
+         self.rtlsdr_source_0.set_gain(gain, 0)
+         self.rtlsdr_source_0.set_if_gain(20, 0)
+         self.rtlsdr_source_0.set_bb_gain(20, 0)
+-        self.rtlsdr_source_0.set_antenna('', 0)
++        self.rtlsdr_source_0.set_antenna("", 0)
+         self.rtlsdr_source_0.set_bandwidth(250e3+abs(shiftoff), 0)
+           
+         self.gsm_sdcch8_demapper_0 = grgsm.gsm_sdcch8_demapper(
+             timeslot_nr=1,
+         )
+-        self.gsm_receiver_0 = grgsm.receiver(4, ([0]), ([]), False)
++        self.gsm_receiver_0 = grgsm.receiver(4, ([arfcn.downlink2arfcn(fc)]), ([]), False)
+         self.gsm_message_printer_1 = grgsm.message_printer(pmt.intern(""), False,
+             False, False)
+         self.gsm_input_0 = grgsm.gsm_input(
+@@ -76,8 +98,9 @@ class grgsm_livemon_headless(gr.top_block):
+             timeslot_nr=0,
+         )
+         self.blocks_socket_pdu_0_1 = blocks.socket_pdu("UDP_CLIENT", collector, collectorport, 1500, False)
+-        self.blocks_socket_pdu_0_0 = blocks.socket_pdu("UDP_SERVER", '127.0.0.1', serverport, 10000, False)
++        self.blocks_socket_pdu_0_0 = blocks.socket_pdu("UDP_SERVER", "127.0.0.1", serverport, 10000, False)
+         self.blocks_rotator_cc_0 = blocks.rotator_cc(-2*pi*shiftoff/samp_rate)
++        self.blocks_head_0 = blocks.head(gr.sizeof_gr_complex*1, int(rec_len*samp_rate))
+ 
+         ##################################################
+         # Connections
+@@ -92,9 +115,10 @@ class grgsm_livemon_headless(gr.top_block):
+         self.msg_connect((self.gsm_receiver_0, 'measurements'), (self.gsm_clock_offset_control_0, 'measurements'))    
+         self.msg_connect((self.gsm_receiver_0, 'C0'), (self.gsm_sdcch8_demapper_0, 'bursts'))    
+         self.msg_connect((self.gsm_sdcch8_demapper_0, 'bursts'), (self.gsm_decryption_0, 'bursts'))    
++        self.connect((self.blocks_head_0, 0), (self.blocks_rotator_cc_0, 0))    
+         self.connect((self.blocks_rotator_cc_0, 0), (self.gsm_input_0, 0))    
+         self.connect((self.gsm_input_0, 0), (self.gsm_receiver_0, 0))    
+-        self.connect((self.rtlsdr_source_0, 0), (self.blocks_rotator_cc_0, 0))    
++        self.connect((self.rtlsdr_source_0, 0), (self.blocks_head_0, 0))    
+ 
+     def get_args(self):
+         return self.args
+@@ -114,14 +138,6 @@ class grgsm_livemon_headless(gr.top_block):
+     def set_collectorport(self, collectorport):
+         self.collectorport = collectorport
+ 
+-    def get_fc(self):
+-        return self.fc
+-
+-    def set_fc(self, fc):
+-        self.fc = fc
+-        self.rtlsdr_source_0.set_center_freq(self.fc-self.shiftoff, 0)
+-        self.gsm_input_0.set_fc(self.fc)
+-
+     def get_gain(self):
+         return self.gain
+ 
+@@ -140,17 +156,25 @@ class grgsm_livemon_headless(gr.top_block):
+ 
+     def set_ppm(self, ppm):
+         self.ppm = ppm
+-        self.rtlsdr_source_0.set_freq_corr(self.ppm, 0)
+         self.gsm_input_0.set_ppm(self.ppm-int(self.ppm))
++        self.rtlsdr_source_0.set_freq_corr(self.ppm, 0)
++
++    def get_rec_len(self):
++        return self.rec_len
++
++    def set_rec_len(self, rec_len):
++        self.rec_len = rec_len
++        self.blocks_head_0.set_length(int(self.rec_len*self.samp_rate))
+ 
+     def get_samp_rate(self):
+         return self.samp_rate
+ 
+     def set_samp_rate(self, samp_rate):
+         self.samp_rate = samp_rate
+-        self.rtlsdr_source_0.set_sample_rate(self.samp_rate)
+-        self.gsm_input_0.set_samp_rate_in(self.samp_rate)
++        self.blocks_head_0.set_length(int(self.rec_len*self.samp_rate))
+         self.blocks_rotator_cc_0.set_phase_inc(-2*pi*self.shiftoff/self.samp_rate)
++        self.gsm_input_0.set_samp_rate_in(self.samp_rate)
++        self.rtlsdr_source_0.set_sample_rate(self.samp_rate)
+ 
+     def get_serverport(self):
+         return self.serverport
+@@ -163,44 +187,54 @@ class grgsm_livemon_headless(gr.top_block):
+ 
+     def set_shiftoff(self, shiftoff):
+         self.shiftoff = shiftoff
++        self.blocks_rotator_cc_0.set_phase_inc(-2*pi*self.shiftoff/self.samp_rate)
+         self.rtlsdr_source_0.set_center_freq(self.fc-self.shiftoff, 0)
+         self.rtlsdr_source_0.set_bandwidth(250e3+abs(self.shiftoff), 0)
+-        self.blocks_rotator_cc_0.set_phase_inc(-2*pi*self.shiftoff/self.samp_rate)
++
++    def get_fc(self):
++        return self.fc
++
++    def set_fc(self, fc):
++        self.fc = fc
++        self.gsm_input_0.set_fc(self.fc)
++        self.rtlsdr_source_0.set_center_freq(self.fc-self.shiftoff, 0)
+ 
+ 
+ def argument_parser():
+-    description = 'Interactive monitor of a single C0 channel with analysis performed by Wireshark (command to run wireshark: sudo wireshark -k -f udp -Y gsmtap -i lo)'
+-    parser = OptionParser(usage="%prog: [options]", option_class=eng_option, description=description)
++    parser = OptionParser(option_class=eng_option, usage="%prog: [options]")
+     parser.add_option(
+         "", "--args", dest="args", type="string", default="",
+         help="Set Device Arguments [default=%default]")
+     parser.add_option(
+-        "", "--collector", dest="collector", type="string", default='localhost',
++        "", "--collector", dest="collector", type="string", default="localhost",
+         help="Set IP or DNS name of collector point [default=%default]")
+     parser.add_option(
+-        "", "--collectorport", dest="collectorport", type="string", default='4729',
++        "", "--collectorport", dest="collectorport", type="string", default="4729",
+         help="Set UDP port number of collector [default=%default]")
+     parser.add_option(
+-        "-f", "--fc", dest="fc", type="eng_float", default=eng_notation.num_to_str(941.8e6),
+-        help="Set GSM channel's central frequency [default=%default]")
+-    parser.add_option(
+         "-g", "--gain", dest="gain", type="eng_float", default=eng_notation.num_to_str(30),
+-        help="Set gain [default=%default]")
++        help="Set RF Gain [default=%default]")
+     parser.add_option(
+         "", "--osr", dest="osr", type="intx", default=4,
+         help="Set OverSampling Ratio [default=%default]")
+     parser.add_option(
+         "-p", "--ppm", dest="ppm", type="eng_float", default=eng_notation.num_to_str(0),
+-        help="Set ppm [default=%default]")
++        help="Set Clock frequency offset in ppms (1/1e6 parts) [default=%default]")
++    parser.add_option(
++        "-T", "--rec-len", dest="rec_len", type="eng_float", default=eng_notation.num_to_str(1000000),
++        help="Set Recording length in seconds [default=%default]")
+     parser.add_option(
+         "-s", "--samp-rate", dest="samp_rate", type="eng_float", default=eng_notation.num_to_str(2000000.052982),
+         help="Set samp_rate [default=%default]")
+     parser.add_option(
+-        "", "--serverport", dest="serverport", type="string", default='4729',
++        "", "--serverport", dest="serverport", type="string", default="4729",
+         help="Set UDP server listening port [default=%default]")
+     parser.add_option(
+         "-o", "--shiftoff", dest="shiftoff", type="eng_float", default=eng_notation.num_to_str(400e3),
+         help="Set Frequency Shiftoff [default=%default]")
++    parser.add_option(
++        "-f", "--fc", dest="fc", type="eng_float", default=eng_notation.num_to_str(957e6),
++        help="Set GSM channel's central frequency [default=%default]")
+     return parser
+ 
+ 
+@@ -208,7 +242,7 @@ def main(top_block_cls=grgsm_livemon_headless, options=None):
+     if options is None:
+         options, _ = argument_parser().parse_args()
+ 
+-    tb = top_block_cls(args=options.args, collector=options.collector, collectorport=options.collectorport, fc=options.fc, gain=options.gain, osr=options.osr, ppm=options.ppm, samp_rate=options.samp_rate, serverport=options.serverport, shiftoff=options.shiftoff)
++    tb = top_block_cls(args=options.args, collector=options.collector, collectorport=options.collectorport, gain=options.gain, osr=options.osr, ppm=options.ppm, rec_len=options.rec_len, samp_rate=options.samp_rate, serverport=options.serverport, shiftoff=options.shiftoff, fc=options.fc)
+     tb.start()
+     tb.wait()
+ 
+diff --git a/apps/grgsm_livemon_headless.grc b/apps/grgsm_livemon_headless.grc
+index caa8e28..f130d71 100644
+--- a/apps/grgsm_livemon_headless.grc
++++ b/apps/grgsm_livemon_headless.grc
+@@ -462,7 +462,7 @@
+     </param>
+     <param>
+       <key>value</key>
+-      <value>941.8e6</value>
++      <value>957e6</value>
+     </param>
+   </block>
+   <block>
+@@ -837,7 +837,7 @@
+     </param>
+     <param>
+       <key>cell_allocation</key>
+-      <value>[0]</value>
++      <value>[arfcn.downlink2arfcn(fc)]</value>
+     </param>
+     <param>
+       <key>comment</key>
+@@ -959,6 +959,37 @@
+     </param>
+   </block>
+   <block>
++    <key>import</key>
++    <param>
++      <key>alias</key>
++      <value></value>
++    </param>
++    <param>
++      <key>comment</key>
++      <value></value>
++    </param>
++    <param>
++      <key>_enabled</key>
++      <value>True</value>
++    </param>
++    <param>
++      <key>_coordinate</key>
++      <value>(200, 60)</value>
++    </param>
++    <param>
++      <key>_rotation</key>
++      <value>0</value>
++    </param>
++    <param>
++      <key>id</key>
++      <value>import_1</value>
++    </param>
++    <param>
++      <key>import</key>
++      <value>from grgsm import arfcn</value>
++    </param>
++  </block>
++  <block>
+     <key>parameter</key>
+     <param>
+       <key>alias</key>
+diff --git a/apps/grgsm_scanner b/apps/grgsm_scanner
+index 6547b2c..1bff63a 100755
+--- a/apps/grgsm_scanner
++++ b/apps/grgsm_scanner
+@@ -305,8 +305,8 @@ def do_scan(samp_rate, band, speed, ppm, gain, args, prn = None):
+         last_arfcn = arfcn_range[1]
+         last_center_arfcn = last_arfcn - int((channels_num / 2) - 1)
+ 
+-        current_freq = grgsm.arfcn.arfcn2downlink(first_arfcn + int(channels_num / 2) - 1, band)
+-        last_freq = grgsm.arfcn.arfcn2downlink(last_center_arfcn, band)
++        current_freq = grgsm.arfcn.arfcn2downlink(first_arfcn + int(channels_num / 2) - 1)
++        last_freq = grgsm.arfcn.arfcn2downlink(last_center_arfcn)
+         stop_freq = last_freq + 0.2e6 * channels_num
+ 
+         while current_freq < stop_freq:
+@@ -352,7 +352,7 @@ def do_scan(samp_rate, band, speed, ppm, gain, args, prn = None):
+                     cell_arfcn_list = scanner.gsm_extract_system_info.get_cell_arfcns(chans[i])
+                     neighbour_list = scanner.gsm_extract_system_info.get_neighbours(chans[i])
+ 
+-                    info = channel_info(grgsm.arfcn.downlink2arfcn(found_freqs[i], band), found_freqs[i],
++                    info = channel_info(grgsm.arfcn.downlink2arfcn(found_freqs[i]), found_freqs[i],
+                                         cell_ids[i], lacs[i], mccs[i], mncs[i], ccch_confs[i], powers[i],
+                                         neighbour_list, cell_arfcn_list)
+                     found_list.append(info)
+@@ -375,7 +375,7 @@ def do_scan(samp_rate, band, speed, ppm, gain, args, prn = None):
+ def argument_parser():
+     parser = OptionParser(option_class=eng_option, usage="%prog: [options]")
+     bands_list = ", ".join(grgsm.arfcn.get_bands())
+-    parser.add_option("-b", "--band", dest="band", default="P-GSM",
++    parser.add_option("-b", "--band", dest="band", default="GSM900",
+                       help="Specify the GSM band for the frequency.\nAvailable bands are: " + bands_list)
+     parser.add_option("-s", "--samp-rate", dest="samp_rate", type="float", default=2e6,
+                       help="Set sample rate [default=%default] - allowed values even_number*0.2e6")
+diff --git a/python/misc_utils/arfcn.py b/python/misc_utils/arfcn.py
+old mode 100644
+new mode 100755
+index 86d379d..349e8ce
+--- a/python/misc_utils/arfcn.py
++++ b/python/misc_utils/arfcn.py
+@@ -2,6 +2,7 @@
+ # -*- coding: utf-8 -*-
+ # @file
+ # @author (C) 2015 by Roman Khassraf <rkhassraf@gmail.com>
++#         (C) 2017 by Piotr Krysik <ptrkrysik@gmail.com>
+ # @section LICENSE
+ #
+ # Gr-gsm is free software; you can redistribute it and/or modify
+@@ -23,32 +24,66 @@
+ 
+ import collections
+ 
++__chan_spacing = 2e5
++__arfcn_pcs = 0x8000
++
+ # first uplink freq, distance between uplink/downlink frequency, list of range tuple
+ # each tuple in a range tuple contains: first arfcn of the range, last arfcn of the range, offset of the range
+ # entries are ordered by relevance
+ __band_conf = collections.OrderedDict([
+-    ('P-GSM', {'f_start': 890.0e6, 'distance': 45e6, 'ranges': [(1, 124, 0)]}),
+-    ('DCS1800', {'f_start': 1710.2e6, 'distance': 95e6, 'ranges': [(512, 885, 512)]}),
+-    ('PCS1900', {'f_start': 1850.2e6, 'distance': 80e6, 'ranges': [(512, 810, 512)]}),
+-    ('E-GSM', {'f_start': 890.0e6, 'distance': 45e6, 'ranges': [(0, 124, 0), (975, 1023, 1024)]}),
+-    ('R-GSM', {'f_start': 890.0e6, 'distance': 45e6, 'ranges': [(0, 124, 0), (955, 1023, 1024)]}),
+-    ('GSM450', {'f_start': 450.6e6, 'distance': 10e6, 'ranges': [(259, 293, 259)]}),
+-    ('GSM480', {'f_start': 479e6, 'distance': 10e6, 'ranges': [(306, 340, 306)]}),
+-    ('GSM850', {'f_start': 824.2e6, 'distance': 45e6, 'ranges': [(128, 251, 128)]}),
++    ('GSM900', {'f_start': 880.2e6, 'distance': 45e6, 'ranges': [(975, 1023), (0, 124)]}),
++    ('DCS1800', {'f_start': 1710.2e6, 'distance': 95e6, 'ranges': [(512, 885)]}),
++    ('GSM850', {'f_start': 824.2e6, 'distance': 45e6, 'ranges': [(128, 251)]}),
++    ('PCS1900', {'f_start': 1850.2e6, 'distance': 80e6, 'ranges': [(512+__arfcn_pcs, 810+__arfcn_pcs)]}), #PCS band is "special" as its channel number range overlap with DCS1800
++    ('GSM450', {'f_start': 450.6e6, 'distance': 10e6, 'ranges': [(259, 293)]}),
++    ('GSM480', {'f_start': 479e6, 'distance': 10e6, 'ranges': [(306, 340)]}),
++    ('GSM-R', {'f_start': 876.2e6, 'distance': 45e6, 'ranges': [(955, 1023), (0, 124)]}),
+ ])
+ 
+-__chan_spacing = 2e5
+-
+ 
+ def get_bands():
+     return __band_conf.keys()
+ 
+-
+-def is_valid_arfcn(arfcn, band):
++def arfcn2band(arfcn):
++    for band_name,band_desc in __band_conf.items():
++        for arfcns_range in band_desc["ranges"]:
++            arfcn_start = arfcns_range[0]
++            arfcn_stop  = arfcns_range[1]
++            if arfcn_start <= arfcn <= arfcn_stop:
++                return band_name
++    return None
++    
++def freq2band(freq, downlink=False):
++    for band_name,band_desc in __band_conf.items():
++        chans_total = 0
++        #count total number of channels in the range
++        for arfcns_range in band_desc["ranges"]:
++            arfcn_start = arfcns_range[0]
++            arfcn_stop  = arfcns_range[1]
++            chans_in_range = arfcn_stop - arfcn_start + 1
++            chans_total = chans_total + chans_in_range
++
++        first_freq = band_desc["f_start"]
++        if downlink:
++            first_freq = first_freq + band_desc["distance"]
++        last_freq  = first_freq + (chans_total - 1) * __chan_spacing
++        
++        if first_freq <= freq <= last_freq:
++            return band_name
++    return None
++
++def uplink2band(freq):
++    return freq2band(freq, False)
++
++def downlink2band(freq):
++    return freq2band(freq, True)
++    
++def is_valid_arfcn(arfcn):
+     """
+     Returns True if arfcn is valid in the given band, else False
+     """
+-    if band in __band_conf:
++    band = arfcn2band(arfcn)
++    if band is not None:
+         conf = __band_conf.get(band)
+         for arfcn_range in conf['ranges']:
+             arfcn_start = arfcn_range[0]
+@@ -58,92 +93,78 @@ def is_valid_arfcn(arfcn, band):
+     return False
+ 
+ 
+-def is_valid_uplink(freq, band):
++def is_valid_uplink(freq):
+     """
+     Returns True if the given frequency is a valid uplink frequency in the given band
+     """
+-    result = None
+-    if band in __band_conf:
+-        conf = __band_conf.get(band)
+-        result = False
+-        for arfcn_range in conf['ranges']:
+-            arfcn_start = arfcn_range[0]
+-            arfcn_end = arfcn_range[1]
+-            first_freq = arfcn2uplink(arfcn_start, band)
+-            last_freq = arfcn2uplink(arfcn_end, band)
+-            if first_freq is None or last_freq is None:
+-                result = False
+-            elif first_freq <= freq <= last_freq:
+-                result = True
++    result = False
++    band = uplink2band(freq)
++    if band is not None:
++        result = True
++        
+     return result
+ 
+-
+-def is_valid_downlink(freq, band):
++def is_valid_downlink(freq):
+     """
+     Returns True if the given frequency is a valid downlink frequency in the given band
+     """
+-    result = None
+-    if band in __band_conf:
+-        conf = __band_conf.get(band)
+-        result = False
+-        for arfcn_range in conf['ranges']:
+-            arfcn_start = arfcn_range[0]
+-            arfcn_end = arfcn_range[1]
+-            first_freq = arfcn2downlink(arfcn_start, band)
+-            last_freq = arfcn2downlink(arfcn_end, band)
+-            if first_freq is None or last_freq is None:
+-                result = False
+-            elif first_freq <= freq <= last_freq:
+-                result = True
++    result = False
++    band = downlink2band(freq)
++    if band is not None:
++        result = True
++        
+     return result
+ 
+-
+-def arfcn2uplink(arfcn, band):
+-    if band in __band_conf and is_valid_arfcn(arfcn, band):
++def arfcn2uplink(arfcn):
++    band = arfcn2band(arfcn)
++    if band is not None:
+         conf = __band_conf.get(band)
+         f_start = conf['f_start']
+-        offset = None
++        arfcns_total = 0
+         for arfcn_range in conf['ranges']:
+             arfcn_start = arfcn_range[0]
+             arfcn_end = arfcn_range[1]
+-            if arfcn_start <= arfcn <= arfcn_end:
+-                offset = arfcn_range[2]
+ 
+-        if offset is not None:
+-            f = f_start + (__chan_spacing * (arfcn - offset))
+-            return round(f, 1)
++            if arfcn_start <= arfcn <= arfcn_end:
++                f = f_start + (__chan_spacing * (arfcn - arfcn_start + arfcns_total))
++                return round(f, 1)
++            arfcns_total = arfcn_end - arfcn_start + 1
+     return -1
+ 
+ 
+-def arfcn2downlink(arfcn, band):
+-    if band in __band_conf and is_valid_arfcn(arfcn, band):
++def arfcn2downlink(arfcn):
++    band = arfcn2band(arfcn)
++    if band is not None:
+         conf = __band_conf.get(band)
+         distance = conf['distance']
+-        return round(arfcn2uplink(arfcn, band) + distance, 1)
++        return round(arfcn2uplink(arfcn) + distance, 1)
+     return -1
+ 
+-
+-def uplink2arfcn(freq, band):
+-    if band in __band_conf and is_valid_uplink(freq, band):
++def uplink2arfcn(freq):
++    band = uplink2band(freq)
++    if band is not None:
+         conf = __band_conf.get(band)
+-        f_start = conf['f_start']
+-        offset = None
++        arfcns_total = 0
+         for arfcn_range in conf['ranges']:
+             arfcn_start = arfcn_range[0]
+             arfcn_end = arfcn_range[1]
+-            offset = arfcn_range[2]
+-            arfcn = int(round(offset + ((freq - f_start) / __chan_spacing), 0))
+-            if arfcn_start <= arfcn <= arfcn_end:
++            arfcns_in_range = arfcn_end - arfcn_start + 1
++           
++            freq_start = conf['f_start'] + arfcns_total * __chan_spacing
++            freq_end = freq_start + (arfcns_in_range - 1) * __chan_spacing 
++            if freq_start <= freq <= freq_end:
++                arfcn = int(round(arfcn_start + ((freq - freq_start) / __chan_spacing), 0))
+                 return arfcn
++            arfcns_total = arfcns_total + arfcns_in_range
+     return -1
+ 
+-
+-def downlink2arfcn(freq, band):
+-    if band in __band_conf and is_valid_downlink(freq, band):
++def downlink2arfcn(freq):
++    band = downlink2band(freq)
++    if band is not None:
+         conf = __band_conf.get(band)
+         distance = conf['distance']
+         freq_uplink = freq - distance
+-        return int(round(uplink2arfcn(freq_uplink, band), 0))
++        return int(round(uplink2arfcn(freq_uplink), 0))
+     return -1
+ 
+ 
+@@ -158,3 +179,4 @@ def get_arfcn_ranges(band):
+             arfcn_tuple = (arfcn_range[0], arfcn_range[1])
+             result.append(arfcn_tuple)
+     return result
++
+diff --git a/python/qa_arfcn.py b/python/qa_arfcn.py
+index 1b7fb73..8fc4695 100755
+--- a/python/qa_arfcn.py
++++ b/python/qa_arfcn.py
+@@ -27,280 +27,241 @@ import arfcn
+ import os
+ import sys
+ 
+-
+ class qa_arfcn(gr_unittest.TestCase):
+     def test_001_is_valid_arfcn(self):
+-        self.assertTrue(arfcn.is_valid_arfcn(259, 'GSM450'))
+-        self.assertTrue(arfcn.is_valid_arfcn(277, 'GSM450'))
+-        self.assertTrue(arfcn.is_valid_arfcn(293, 'GSM450'))
+-        self.assertFalse(arfcn.is_valid_arfcn(258, 'GSM450'))
+-        self.assertFalse(arfcn.is_valid_arfcn(294, 'GSM450'))
+-
+-        self.assertTrue(arfcn.is_valid_arfcn(306, 'GSM480'))
+-        self.assertTrue(arfcn.is_valid_arfcn(323, 'GSM480'))
+-        self.assertTrue(arfcn.is_valid_arfcn(340, 'GSM480'))
+-        self.assertFalse(arfcn.is_valid_arfcn(305, 'GSM480'))
+-        self.assertFalse(arfcn.is_valid_arfcn(341, 'GSM480'))
+-
+-        self.assertTrue(arfcn.is_valid_arfcn(128, 'GSM850'))
+-        self.assertTrue(arfcn.is_valid_arfcn(199, 'GSM850'))
+-        self.assertTrue(arfcn.is_valid_arfcn(251, 'GSM850'))
+-        self.assertFalse(arfcn.is_valid_arfcn(127, 'GSM480'))
+-        self.assertFalse(arfcn.is_valid_arfcn(251, 'GSM480'))
+-
+-        self.assertTrue(arfcn.is_valid_arfcn(1, 'P-GSM'))
+-        self.assertTrue(arfcn.is_valid_arfcn(63, 'P-GSM'))
+-        self.assertTrue(arfcn.is_valid_arfcn(124, 'P-GSM'))
+-        self.assertFalse(arfcn.is_valid_arfcn(0, 'P-GSM'))
+-        self.assertFalse(arfcn.is_valid_arfcn(125, 'P-GSM'))
+-
+-        self.assertTrue(arfcn.is_valid_arfcn(0, 'E-GSM'))
+-        self.assertTrue(arfcn.is_valid_arfcn(1, 'E-GSM'))
+-        self.assertTrue(arfcn.is_valid_arfcn(124, 'E-GSM'))
+-        self.assertFalse(arfcn.is_valid_arfcn(125, 'E-GSM'))
+-
+-        self.assertTrue(arfcn.is_valid_arfcn(975, 'E-GSM'))
+-        self.assertTrue(arfcn.is_valid_arfcn(999, 'E-GSM'))
+-        self.assertTrue(arfcn.is_valid_arfcn(1023, 'E-GSM'))
+-        self.assertFalse(arfcn.is_valid_arfcn(974, 'E-GSM'))
+-        self.assertFalse(arfcn.is_valid_arfcn(1024, 'E-GSM'))
+-
+-        self.assertTrue(arfcn.is_valid_arfcn(0, 'R-GSM'))
+-        self.assertTrue(arfcn.is_valid_arfcn(1, 'R-GSM'))
+-        self.assertTrue(arfcn.is_valid_arfcn(124, 'R-GSM'))
+-        self.assertFalse(arfcn.is_valid_arfcn(125, 'R-GSM'))
+-
+-        self.assertTrue(arfcn.is_valid_arfcn(955, 'R-GSM'))
+-        self.assertTrue(arfcn.is_valid_arfcn(989, 'R-GSM'))
+-        self.assertTrue(arfcn.is_valid_arfcn(1023, 'R-GSM'))
+-        self.assertFalse(arfcn.is_valid_arfcn(954, 'R-GSM'))
+-        self.assertFalse(arfcn.is_valid_arfcn(1024, 'R-GSM'))
+-
+-        self.assertTrue(arfcn.is_valid_arfcn(512, 'DCS1800'))
+-        self.assertTrue(arfcn.is_valid_arfcn(732, 'DCS1800'))
+-        self.assertTrue(arfcn.is_valid_arfcn(885, 'DCS1800'))
+-        self.assertFalse(arfcn.is_valid_arfcn(511, 'DCS1800'))
+-        self.assertFalse(arfcn.is_valid_arfcn(886, 'DCS1800'))
+-
+-        self.assertTrue(arfcn.is_valid_arfcn(512, 'PCS1900'))
+-        self.assertTrue(arfcn.is_valid_arfcn(691, 'PCS1900'))
+-        self.assertTrue(arfcn.is_valid_arfcn(810, 'PCS1900'))
+-        self.assertFalse(arfcn.is_valid_arfcn(511, 'PCS1900'))
+-        self.assertFalse(arfcn.is_valid_arfcn(811, 'PCS1900'))
++        self.assertTrue(arfcn.is_valid_arfcn(259))
++        self.assertTrue(arfcn.is_valid_arfcn(277))
++        self.assertTrue(arfcn.is_valid_arfcn(293))
++        self.assertFalse(arfcn.is_valid_arfcn(258))
++        self.assertFalse(arfcn.is_valid_arfcn(294))
++
++        self.assertTrue(arfcn.is_valid_arfcn(306))
++        self.assertTrue(arfcn.is_valid_arfcn(323))
++        self.assertTrue(arfcn.is_valid_arfcn(340))
++        self.assertFalse(arfcn.is_valid_arfcn(305))
++        self.assertFalse(arfcn.is_valid_arfcn(341))
++
++        self.assertTrue(arfcn.is_valid_arfcn(128))
++        self.assertTrue(arfcn.is_valid_arfcn(199))
++        self.assertTrue(arfcn.is_valid_arfcn(251))
++        self.assertFalse(arfcn.is_valid_arfcn(127))
++        self.assertFalse(arfcn.is_valid_arfcn(252))
++
++
++        self.assertTrue(arfcn.is_valid_arfcn(0))
++        self.assertTrue(arfcn.is_valid_arfcn(1))
++        self.assertTrue(arfcn.is_valid_arfcn(124))
++        self.assertFalse(arfcn.is_valid_arfcn(125))
++
++        self.assertTrue(arfcn.is_valid_arfcn(0))
++        self.assertTrue(arfcn.is_valid_arfcn(1))
++        self.assertTrue(arfcn.is_valid_arfcn(124))
++        self.assertFalse(arfcn.is_valid_arfcn(125))
++
++        self.assertTrue(arfcn.is_valid_arfcn(955))
++        self.assertTrue(arfcn.is_valid_arfcn(989))
++        self.assertTrue(arfcn.is_valid_arfcn(1023))
++        self.assertFalse(arfcn.is_valid_arfcn(954))
++        self.assertFalse(arfcn.is_valid_arfcn(1024))
++
++        self.assertTrue(arfcn.is_valid_arfcn(512))
++        self.assertTrue(arfcn.is_valid_arfcn(732))
++        self.assertTrue(arfcn.is_valid_arfcn(885))
++        self.assertFalse(arfcn.is_valid_arfcn(511))
++        self.assertFalse(arfcn.is_valid_arfcn(886))
++        
++        self.assertTrue(arfcn.is_valid_arfcn(512+2**15))
++        self.assertTrue(arfcn.is_valid_arfcn(691+2**15))
++        self.assertTrue(arfcn.is_valid_arfcn(810+2**15))
++        self.assertFalse(arfcn.is_valid_arfcn(511+2**15))
++        self.assertFalse(arfcn.is_valid_arfcn(811+2**15))
+ 
+     def test_002_is_valid_uplink(self):
+-        self.assertTrue(arfcn.is_valid_uplink(450.6e6, 'GSM450'))
+-        self.assertTrue(arfcn.is_valid_uplink(457.4e6, 'GSM450'))
+-        self.assertFalse(arfcn.is_valid_uplink(450.4e6, 'GSM450'))
+-        self.assertFalse(arfcn.is_valid_uplink(457.6e6, 'GSM450'))
+-
+-        self.assertTrue(arfcn.is_valid_uplink(479e6, 'GSM480'))
+-        self.assertTrue(arfcn.is_valid_uplink(485.8e6, 'GSM480'))
+-        self.assertFalse(arfcn.is_valid_uplink(478.8e6, 'GSM480'))
+-        self.assertFalse(arfcn.is_valid_uplink(486e6, 'GSM480'))
+-
+-        self.assertTrue(arfcn.is_valid_uplink(824.2e6, 'GSM850'))
+-        self.assertTrue(arfcn.is_valid_uplink(848.8e6, 'GSM850'))
+-        self.assertFalse(arfcn.is_valid_uplink(824e6, 'GSM850'))
+-        self.assertFalse(arfcn.is_valid_uplink(849e6, 'GSM850'))
+-
+-        self.assertTrue(arfcn.is_valid_uplink(890.2e6, 'P-GSM'))
+-        self.assertTrue(arfcn.is_valid_uplink(914.8e6, 'P-GSM'))
+-        self.assertFalse(arfcn.is_valid_uplink(890e6, 'P-GSM'))
+-        self.assertFalse(arfcn.is_valid_uplink(915e6, 'P-GSM'))
+-
+-        self.assertTrue(arfcn.is_valid_uplink(880.2e6, 'E-GSM'))
+-        self.assertTrue(arfcn.is_valid_uplink(889.8e6, 'E-GSM'))
+-        self.assertTrue(arfcn.is_valid_uplink(890.0e6, 'E-GSM'))
+-        self.assertTrue(arfcn.is_valid_uplink(914.8e6, 'E-GSM'))
+-        self.assertFalse(arfcn.is_valid_uplink(880e6, 'E-GSM'))
+-        self.assertFalse(arfcn.is_valid_uplink(915e6, 'E-GSM'))
+-
+-        self.assertTrue(arfcn.is_valid_uplink(876.2e6, 'R-GSM'))
+-        self.assertTrue(arfcn.is_valid_uplink(889.8e6, 'R-GSM'))
+-        self.assertTrue(arfcn.is_valid_uplink(890.0e6, 'R-GSM'))
+-        self.assertTrue(arfcn.is_valid_uplink(914.8e6, 'R-GSM'))
+-        self.assertFalse(arfcn.is_valid_uplink(876e6, 'R-GSM'))
+-        self.assertFalse(arfcn.is_valid_uplink(915e6, 'R-GSM'))
+-
+-        self.assertTrue(arfcn.is_valid_uplink(1710.2e6, 'DCS1800'))
+-        self.assertTrue(arfcn.is_valid_uplink(1784.8e6, 'DCS1800'))
+-        self.assertFalse(arfcn.is_valid_uplink(1710e6, 'DCS1800'))
+-        self.assertFalse(arfcn.is_valid_uplink(1785e6, 'DCS1800'))
+-
+-        self.assertTrue(arfcn.is_valid_uplink(1850.2e6, 'PCS1900'))
+-        self.assertTrue(arfcn.is_valid_uplink(1909.8e6, 'PCS1900'))
+-        self.assertFalse(arfcn.is_valid_uplink(1850e6, 'PCS1900'))
+-        self.assertFalse(arfcn.is_valid_uplink(1910e6, 'PCS1900'))
++        self.assertTrue(arfcn.is_valid_uplink(450.6e6))
++        self.assertTrue(arfcn.is_valid_uplink(457.4e6))
++        self.assertFalse(arfcn.is_valid_uplink(450.4e6))
++        self.assertFalse(arfcn.is_valid_uplink(457.6e6))
++
++        self.assertTrue(arfcn.is_valid_uplink(479e6))
++        self.assertTrue(arfcn.is_valid_uplink(485.8e6))
++        self.assertFalse(arfcn.is_valid_uplink(478.8e6))
++        self.assertFalse(arfcn.is_valid_uplink(486e6))
++
++        self.assertTrue(arfcn.is_valid_uplink(824.2e6))
++        self.assertTrue(arfcn.is_valid_uplink(848.8e6))
++        self.assertFalse(arfcn.is_valid_uplink(824e6))
++        self.assertFalse(arfcn.is_valid_uplink(849e6))
++
++        self.assertTrue(arfcn.is_valid_uplink(876.2e6))
++        self.assertTrue(arfcn.is_valid_uplink(889.8e6))
++        self.assertTrue(arfcn.is_valid_uplink(890.0e6))
++        self.assertTrue(arfcn.is_valid_uplink(914.8e6))
++        self.assertFalse(arfcn.is_valid_uplink(876e6))
++        self.assertFalse(arfcn.is_valid_uplink(915e6))
++
++        self.assertTrue(arfcn.is_valid_uplink(1710.2e6))
++        self.assertTrue(arfcn.is_valid_uplink(1784.8e6))
++        self.assertFalse(arfcn.is_valid_uplink(1710e6))
++        self.assertFalse(arfcn.is_valid_uplink(1785e6))
++
++        self.assertTrue(arfcn.is_valid_uplink(1850.2e6))
++        self.assertTrue(arfcn.is_valid_uplink(1909.8e6))
++        self.assertFalse(arfcn.is_valid_uplink(1850e6))
++        self.assertFalse(arfcn.is_valid_uplink(1910e6))
+ 
+     def test_003_is_valid_downlink(self):
+-        self.assertTrue(arfcn.is_valid_downlink(460.6e6, 'GSM450'))
+-        self.assertTrue(arfcn.is_valid_downlink(467.4e6, 'GSM450'))
+-        self.assertFalse(arfcn.is_valid_downlink(460.4e6, 'GSM450'))
+-        self.assertFalse(arfcn.is_valid_downlink(467.6e6, 'GSM450'))
+-
+-        self.assertTrue(arfcn.is_valid_downlink(489e6, 'GSM480'))
+-        self.assertTrue(arfcn.is_valid_downlink(495.8e6, 'GSM480'))
+-        self.assertFalse(arfcn.is_valid_downlink(488.8e6, 'GSM480'))
+-        self.assertFalse(arfcn.is_valid_downlink(496e6, 'GSM480'))
+-
+-        self.assertTrue(arfcn.is_valid_downlink(869.2e6, 'GSM850'))
+-        self.assertTrue(arfcn.is_valid_downlink(893.8e6, 'GSM850'))
+-        self.assertFalse(arfcn.is_valid_downlink(869e6, 'GSM850'))
+-        self.assertFalse(arfcn.is_valid_downlink(894e6, 'GSM850'))
+-
+-        self.assertTrue(arfcn.is_valid_downlink(935.2e6, 'P-GSM'))
+-        self.assertTrue(arfcn.is_valid_downlink(959.8e6, 'P-GSM'))
+-        self.assertFalse(arfcn.is_valid_downlink(935e6, 'P-GSM'))
+-        self.assertFalse(arfcn.is_valid_downlink(960e6, 'P-GSM'))
+-
+-        self.assertTrue(arfcn.is_valid_downlink(925.2e6, 'E-GSM'))
+-        self.assertTrue(arfcn.is_valid_downlink(934.8e6, 'E-GSM'))
+-        self.assertTrue(arfcn.is_valid_downlink(935.0e6, 'E-GSM'))
+-        self.assertTrue(arfcn.is_valid_downlink(959.8e6, 'E-GSM'))
+-        self.assertFalse(arfcn.is_valid_downlink(925e6, 'E-GSM'))
+-        self.assertFalse(arfcn.is_valid_downlink(960e6, 'E-GSM'))
+-
+-        self.assertTrue(arfcn.is_valid_downlink(921.2e6, 'R-GSM'))
+-        self.assertTrue(arfcn.is_valid_downlink(934.8e6, 'R-GSM'))
+-        self.assertTrue(arfcn.is_valid_downlink(935.0e6, 'R-GSM'))
+-        self.assertTrue(arfcn.is_valid_downlink(959.8e6, 'R-GSM'))
+-        self.assertFalse(arfcn.is_valid_downlink(921e6, 'R-GSM'))
+-        self.assertFalse(arfcn.is_valid_downlink(960e6, 'R-GSM'))
+-
+-        self.assertTrue(arfcn.is_valid_downlink(1805.2e6, 'DCS1800'))
+-        self.assertTrue(arfcn.is_valid_downlink(1879.8e6, 'DCS1800'))
+-        self.assertFalse(arfcn.is_valid_downlink(1805e6, 'DCS1800'))
+-        self.assertFalse(arfcn.is_valid_downlink(1880e6, 'DCS1800'))
+-
+-        self.assertTrue(arfcn.is_valid_downlink(1930.2e6, 'PCS1900'))
+-        self.assertTrue(arfcn.is_valid_downlink(1989.8e6, 'PCS1900'))
+-        self.assertFalse(arfcn.is_valid_downlink(1930e6, 'PCS1900'))
+-        self.assertFalse(arfcn.is_valid_downlink(1990e6, 'PCS1900'))
++        self.assertTrue(arfcn.is_valid_downlink(460.6e6))
++        self.assertTrue(arfcn.is_valid_downlink(467.4e6))
++        self.assertFalse(arfcn.is_valid_downlink(460.4e6))
++        self.assertFalse(arfcn.is_valid_downlink(467.6e6))
++
++        self.assertTrue(arfcn.is_valid_downlink(489e6))
++        self.assertTrue(arfcn.is_valid_downlink(495.8e6))
++        self.assertFalse(arfcn.is_valid_downlink(488.8e6))
++        self.assertFalse(arfcn.is_valid_downlink(496e6))
++
++        self.assertTrue(arfcn.is_valid_downlink(869.2e6))
++        self.assertTrue(arfcn.is_valid_downlink(893.8e6))
++        self.assertFalse(arfcn.is_valid_downlink(869e6))
++        self.assertFalse(arfcn.is_valid_downlink(894e6))
++
++        self.assertTrue(arfcn.is_valid_downlink(921.2e6))
++        self.assertTrue(arfcn.is_valid_downlink(934.8e6))
++        self.assertTrue(arfcn.is_valid_downlink(935.0e6))
++        self.assertTrue(arfcn.is_valid_downlink(959.8e6))
++        self.assertFalse(arfcn.is_valid_downlink(921e6))
++        self.assertFalse(arfcn.is_valid_downlink(960e6))
++
++        self.assertTrue(arfcn.is_valid_downlink(1805.2e6))
++        self.assertTrue(arfcn.is_valid_downlink(1879.8e6))
++        self.assertFalse(arfcn.is_valid_downlink(1805e6))
++        self.assertFalse(arfcn.is_valid_downlink(1880e6))
++
++        self.assertTrue(arfcn.is_valid_downlink(1930.2e6))
++        self.assertTrue(arfcn.is_valid_downlink(1989.8e6))
++        self.assertFalse(arfcn.is_valid_downlink(1930e6))
++        self.assertFalse(arfcn.is_valid_downlink(1990e6))
+ 
+     def test_004_arfcn2uplink(self):
+-        self.assertEqual(450.6e6, arfcn.arfcn2uplink(259, 'GSM450'))
+-        self.assertEqual(457.4e6, arfcn.arfcn2uplink(293, 'GSM450'))
++        self.assertEqual(450.6e6, arfcn.arfcn2uplink(259))
++        self.assertEqual(457.4e6, arfcn.arfcn2uplink(293))
+ 
+-        self.assertEqual(479e6, arfcn.arfcn2uplink(306, 'GSM480'))
+-        self.assertEqual(485.8e6, arfcn.arfcn2uplink(340, 'GSM480'))
++        self.assertEqual(479e6, arfcn.arfcn2uplink(306))
++        self.assertEqual(485.8e6, arfcn.arfcn2uplink(340))
+ 
+-        self.assertEqual(824.2e6, arfcn.arfcn2uplink(128, 'GSM850'))
+-        self.assertEqual(848.8e6, arfcn.arfcn2uplink(251, 'GSM850'))
++        self.assertEqual(824.2e6, arfcn.arfcn2uplink(128))
++        self.assertEqual(848.8e6, arfcn.arfcn2uplink(251))
+ 
+-        self.assertEqual(890.2e6, arfcn.arfcn2uplink(1, 'P-GSM'))
+-        self.assertEqual(914.8e6, arfcn.arfcn2uplink(124, 'P-GSM'))
++        self.assertEqual(890.2e6, arfcn.arfcn2uplink(1))
++        self.assertEqual(914.8e6, arfcn.arfcn2uplink(124))
+ 
+-        self.assertEqual(890.0e6, arfcn.arfcn2uplink(0, 'E-GSM'))
+-        self.assertEqual(914.8e6, arfcn.arfcn2uplink(124, 'E-GSM'))
+-        self.assertEqual(880.2e6, arfcn.arfcn2uplink(975, 'E-GSM'))
+-        self.assertEqual(889.8e6, arfcn.arfcn2uplink(1023, 'E-GSM'))
++        self.assertEqual(890.0e6, arfcn.arfcn2uplink(0))
++        self.assertEqual(914.8e6, arfcn.arfcn2uplink(124))
++        self.assertEqual(880.2e6, arfcn.arfcn2uplink(975))
++        self.assertEqual(889.8e6, arfcn.arfcn2uplink(1023))
+ 
+-        self.assertEqual(890.0e6, arfcn.arfcn2uplink(0, 'R-GSM'))
+-        self.assertEqual(914.8e6, arfcn.arfcn2uplink(124, 'R-GSM'))
+-        self.assertEqual(876.2e6, arfcn.arfcn2uplink(955, 'R-GSM'))
+-        self.assertEqual(889.8e6, arfcn.arfcn2uplink(1023, 'R-GSM'))
++        self.assertEqual(890.0e6, arfcn.arfcn2uplink(0))
++        self.assertEqual(914.8e6, arfcn.arfcn2uplink(124))
++        self.assertEqual(876.2e6, arfcn.arfcn2uplink(955))
++        self.assertEqual(889.8e6, arfcn.arfcn2uplink(1023))
+ 
+-        self.assertEqual(1710.2e6, arfcn.arfcn2uplink(512, 'DCS1800'))
+-        self.assertEqual(1784.8e6, arfcn.arfcn2uplink(885, 'DCS1800'))
++        self.assertEqual(1710.2e6, arfcn.arfcn2uplink(512))
++        self.assertEqual(1784.8e6, arfcn.arfcn2uplink(885))
+ 
+-        self.assertEqual(1850.2e6, arfcn.arfcn2uplink(512, 'PCS1900'))
+-        self.assertEqual(1909.8e6, arfcn.arfcn2uplink(810, 'PCS1900'))
++        self.assertEqual(1850.2e6, arfcn.arfcn2uplink(512+2**15))
++        self.assertEqual(1909.8e6, arfcn.arfcn2uplink(810+2**15))
+ 
+     def test_005_arfcn2downlink(self):
+-        self.assertEqual(460.6e6, arfcn.arfcn2downlink(259, 'GSM450'))
+-        self.assertEqual(467.4e6, arfcn.arfcn2downlink(293, 'GSM450'))
+-
+-        self.assertEqual(489e6, arfcn.arfcn2downlink(306, 'GSM480'))
+-        self.assertEqual(495.8e6, arfcn.arfcn2downlink(340, 'GSM480'))
++        self.assertEqual(460.6e6, arfcn.arfcn2downlink(259))
++        self.assertEqual(467.4e6, arfcn.arfcn2downlink(293))
+ 
+-        self.assertEqual(869.2e6, arfcn.arfcn2downlink(128, 'GSM850'))
+-        self.assertEqual(893.8e6, arfcn.arfcn2downlink(251, 'GSM850'))
++        self.assertEqual(489e6, arfcn.arfcn2downlink(306))
++        self.assertEqual(495.8e6, arfcn.arfcn2downlink(340))
+ 
+-        self.assertEqual(935.2e6, arfcn.arfcn2downlink(1, 'P-GSM'))
+-        self.assertEqual(959.8e6, arfcn.arfcn2downlink(124, 'P-GSM'))
++        self.assertEqual(869.2e6, arfcn.arfcn2downlink(128))
++        self.assertEqual(893.8e6, arfcn.arfcn2downlink(251))
+ 
+-        self.assertEqual(935.0e6, arfcn.arfcn2downlink(0, 'E-GSM'))
+-        self.assertEqual(959.8e6, arfcn.arfcn2downlink(124, 'E-GSM'))
+-        self.assertEqual(925.2e6, arfcn.arfcn2downlink(975, 'E-GSM'))
+-        self.assertEqual(934.8e6, arfcn.arfcn2downlink(1023, 'E-GSM'))
++        self.assertEqual(935.2e6, arfcn.arfcn2downlink(1))
++        self.assertEqual(959.8e6, arfcn.arfcn2downlink(124))
+ 
+-        self.assertEqual(935.0e6, arfcn.arfcn2downlink(0, 'R-GSM'))
+-        self.assertEqual(959.8e6, arfcn.arfcn2downlink(124, 'R-GSM'))
+-        self.assertEqual(921.2e6, arfcn.arfcn2downlink(955, 'R-GSM'))
+-        self.assertEqual(934.8e6, arfcn.arfcn2downlink(1023, 'R-GSM'))
++        self.assertEqual(935.0e6, arfcn.arfcn2downlink(0))
++        self.assertEqual(959.8e6, arfcn.arfcn2downlink(124))
++        self.assertEqual(925.2e6, arfcn.arfcn2downlink(975))
++        self.assertEqual(934.8e6, arfcn.arfcn2downlink(1023))
+ 
+-        self.assertEqual(1805.2e6, arfcn.arfcn2downlink(512, 'DCS1800'))
+-        self.assertEqual(1879.8e6, arfcn.arfcn2downlink(885, 'DCS1800'))
++        self.assertEqual(935.0e6, arfcn.arfcn2downlink(0))
++        self.assertEqual(959.8e6, arfcn.arfcn2downlink(124))
++        self.assertEqual(921.2e6, arfcn.arfcn2downlink(955))
++        self.assertEqual(934.8e6, arfcn.arfcn2downlink(1023))
+ 
+-        self.assertEqual(1930.2e6, arfcn.arfcn2downlink(512, 'PCS1900'))
+-        self.assertEqual(1989.8e6, arfcn.arfcn2downlink(810, 'PCS1900'))
++        self.assertEqual(1805.2e6, arfcn.arfcn2downlink(512))
++        self.assertEqual(1879.8e6, arfcn.arfcn2downlink(885))
+ 
++        self.assertEqual(1930.2e6, arfcn.arfcn2downlink(512+2**15))
++        self.assertEqual(1989.8e6, arfcn.arfcn2downlink(810+2**15))
+     def test_006_uplink2arfcn(self):
+-        self.assertEqual(259, arfcn.uplink2arfcn(450.6e6, 'GSM450'))
+-        self.assertEqual(293, arfcn.uplink2arfcn(457.4e6, 'GSM450'))
++        self.assertEqual(259, arfcn.uplink2arfcn(450.6e6))
++        self.assertEqual(293, arfcn.uplink2arfcn(457.4e6))
+ 
+-        self.assertEqual(306, arfcn.uplink2arfcn(479e6, 'GSM480'))
+-        self.assertEqual(340, arfcn.uplink2arfcn(485.8e6, 'GSM480'))
++        self.assertEqual(306, arfcn.uplink2arfcn(479e6))
++        self.assertEqual(340, arfcn.uplink2arfcn(485.8e6))
+ 
+-        self.assertEqual(128, arfcn.uplink2arfcn(824.2e6, 'GSM850'))
+-        self.assertEqual(251, arfcn.uplink2arfcn(848.8e6, 'GSM850'))
++        self.assertEqual(128, arfcn.uplink2arfcn(824.2e6))
++        self.assertEqual(251, arfcn.uplink2arfcn(848.8e6))
+ 
+-        self.assertEqual(1, arfcn.uplink2arfcn(890.2e6, 'P-GSM'))
+-        self.assertEqual(124, arfcn.uplink2arfcn(914.8e6, 'P-GSM'))
++        self.assertEqual(1, arfcn.uplink2arfcn(890.2e6))
++        self.assertEqual(124, arfcn.uplink2arfcn(914.8e6))
+ 
+-        self.assertEqual(0, arfcn.uplink2arfcn(890.0e6, 'E-GSM'))
+-        self.assertEqual(124, arfcn.uplink2arfcn(914.8e6, 'E-GSM'))
+-        self.assertEqual(975, arfcn.uplink2arfcn(880.2e6, 'E-GSM'))
+-        self.assertEqual(1023, arfcn.uplink2arfcn(889.8e6, 'E-GSM'))
++        self.assertEqual(0, arfcn.uplink2arfcn(890.0e6))
++        self.assertEqual(124, arfcn.uplink2arfcn(914.8e6))
++        self.assertEqual(975, arfcn.uplink2arfcn(880.2e6))
++        self.assertEqual(1023, arfcn.uplink2arfcn(889.8e6))
+ 
+-        self.assertEqual(0, arfcn.uplink2arfcn(890.0e6, 'R-GSM'))
+-        self.assertEqual(124, arfcn.uplink2arfcn(914.8e6, 'R-GSM'))
+-        self.assertEqual(955, arfcn.uplink2arfcn(876.2e6, 'R-GSM'))
+-        self.assertEqual(1023, arfcn.uplink2arfcn(889.8e6, 'R-GSM'))
++        self.assertEqual(0, arfcn.uplink2arfcn(890.0e6))
++        self.assertEqual(124, arfcn.uplink2arfcn(914.8e6))
++        self.assertEqual(955, arfcn.uplink2arfcn(876.2e6))
++        self.assertEqual(1023, arfcn.uplink2arfcn(889.8e6))
+ 
+-        self.assertEqual(512, arfcn.uplink2arfcn(1710.2e6, 'DCS1800'))
+-        self.assertEqual(885, arfcn.uplink2arfcn(1784.8e6, 'DCS1800'))
++        self.assertEqual(512, arfcn.uplink2arfcn(1710.2e6))
++        self.assertEqual(885, arfcn.uplink2arfcn(1784.8e6))
+ 
+-        self.assertEqual(512, arfcn.uplink2arfcn(1850.2e6, 'PCS1900'))
+-        self.assertEqual(810, arfcn.uplink2arfcn(1909.8e6, 'PCS1900'))
++        self.assertEqual(512+2**15, arfcn.uplink2arfcn(1850.2e6))
++        self.assertEqual(810+2**15, arfcn.uplink2arfcn(1909.8e6))
+ 
+     def test_007_downlink2arfcn(self):
+-        self.assertEqual(259, arfcn.downlink2arfcn(460.6e6, 'GSM450'))
+-        self.assertEqual(293, arfcn.downlink2arfcn(467.4e6, 'GSM450'))
++        self.assertEqual(259, arfcn.downlink2arfcn(460.6e6))
++        self.assertEqual(293, arfcn.downlink2arfcn(467.4e6))
+ 
+-        self.assertEqual(306, arfcn.downlink2arfcn(489e6, 'GSM480'))
+-        self.assertEqual(340, arfcn.downlink2arfcn(495.8e6, 'GSM480'))
++        self.assertEqual(306, arfcn.downlink2arfcn(489e6,))
++        self.assertEqual(340, arfcn.downlink2arfcn(495.8e6))
+ 
+-        self.assertEqual(128, arfcn.downlink2arfcn(869.2e6, 'GSM850'))
+-        self.assertEqual(251, arfcn.downlink2arfcn(893.8e6, 'GSM850'))
++        self.assertEqual(128, arfcn.downlink2arfcn(869.2e6))
++        self.assertEqual(251, arfcn.downlink2arfcn(893.8e6))
+ 
+-        self.assertEqual(1, arfcn.downlink2arfcn(935.2e6, 'P-GSM'))
+-        self.assertEqual(124, arfcn.downlink2arfcn(959.8e6, 'P-GSM'))
++        self.assertEqual(1, arfcn.downlink2arfcn(935.2e6))
++        self.assertEqual(124, arfcn.downlink2arfcn(959.8e6))
+ 
+-        self.assertEqual(0, arfcn.downlink2arfcn(935.0e6, 'E-GSM'))
+-        self.assertEqual(124, arfcn.downlink2arfcn(959.8e6, 'E-GSM'))
+-        self.assertEqual(975, arfcn.downlink2arfcn(925.2e6, 'E-GSM'))
+-        self.assertEqual(1023, arfcn.downlink2arfcn(934.8e6, 'E-GSM'))
++        self.assertEqual(0, arfcn.downlink2arfcn(935.0e6))
++        self.assertEqual(124, arfcn.downlink2arfcn(959.8e6))
++        self.assertEqual(975, arfcn.downlink2arfcn(925.2e6))
++        self.assertEqual(1023, arfcn.downlink2arfcn(934.8e6))
+ 
+-        self.assertEqual(0, arfcn.downlink2arfcn(935.0e6, 'R-GSM'))
+-        self.assertEqual(124, arfcn.downlink2arfcn(959.8e6, 'R-GSM'))
+-        self.assertEqual(955, arfcn.downlink2arfcn(921.2e6, 'R-GSM'))
+-        self.assertEqual(1023, arfcn.downlink2arfcn(934.8e6, 'R-GSM'))
++        self.assertEqual(0, arfcn.downlink2arfcn(935.0e6))
++        self.assertEqual(124, arfcn.downlink2arfcn(959.8e6))
++        self.assertEqual(955, arfcn.downlink2arfcn(921.2e6))
++        self.assertEqual(1023, arfcn.downlink2arfcn(934.8e6))
+ 
+-        self.assertEqual(512, arfcn.downlink2arfcn(1805.2e6, 'DCS1800'))
+-        self.assertEqual(885, arfcn.downlink2arfcn(1879.8e6, 'DCS1800'))
++        self.assertEqual(512, arfcn.downlink2arfcn(1805.2e6))
++        self.assertEqual(885, arfcn.downlink2arfcn(1879.8e6))
+ 
+-        self.assertEqual(512, arfcn.downlink2arfcn(1930.2e6, 'PCS1900'))
+-        self.assertEqual(810, arfcn.downlink2arfcn(1989.8e6, 'PCS1900'))
++        self.assertEqual(512+2**15, arfcn.downlink2arfcn(1930.2e6))
++        self.assertEqual(810+2**15, arfcn.downlink2arfcn(1989.8e6))
+ 
+     def test_008_get_arfcn_ranges(self):
+         self.assertEqual(1, len(arfcn.get_arfcn_ranges('GSM450')))
+         self.assertEqual(1, len(arfcn.get_arfcn_ranges('GSM480')))
+         self.assertEqual(1, len(arfcn.get_arfcn_ranges('GSM850')))
+-        self.assertEqual(1, len(arfcn.get_arfcn_ranges('P-GSM')))
+-        self.assertEqual(2, len(arfcn.get_arfcn_ranges('E-GSM')))
+-        self.assertEqual(2, len(arfcn.get_arfcn_ranges('R-GSM')))
++        self.assertEqual(2, len(arfcn.get_arfcn_ranges('GSM900')))
+         self.assertEqual(1, len(arfcn.get_arfcn_ranges('DCS1800')))
+         self.assertEqual(1, len(arfcn.get_arfcn_ranges('PCS1900')))
+ 
