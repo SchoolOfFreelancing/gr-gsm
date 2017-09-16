@@ -1,51 +1,75 @@
 Description: Make sure livemon report arfcn in gsmtap header
  Calculate arfcn number based on the selected frequency.
-Origin: commit 3dfa11b89e6a74e6857c11e3029b372c746d535f
+Origin: upstream, commits starting from 3dfa11b89e6a74e6857c11e3029b372c746d535f
 Forwarded: no-need
 Reviewed-By: Petter Reinholdtsen <pere@hungry.com>
-Last-Update: 2017-09-06
+Last-Update: 2017-09-16
 Author: Piotr Krysik <ptrkrysik@gmail.com>
-Date:   Wed Sep 6 17:48:38 2017 +0200
 
-    Making arfcn<->freq conversions more robust and uptading apps depending on it
+    Making arfcn<->freq conversions more robust and update apps
+    depending on it.  Remove all references to band.
 
+diff --git a/apps/grgsm_decode b/apps/grgsm_decode
+index 222d67e..9c01e66 100755
+--- a/apps/grgsm_decode
++++ b/apps/grgsm_decode
+@@ -284,12 +284,7 @@ if __name__ == '__main__':
+     cfile_options.add_option("-f", "--fc", dest="fc", type="eng_float",
+                              help="Frequency of cfile capture")
+     cfile_options.add_option("-a", "--arfcn", dest="arfcn", type="intx",
+-                             help="Set ARFCN instead of frequency. "
+-                                  "In some cases you may have to provide the GSM band also")
+-    cfile_options.add_option("--band", dest="band",
+-                             help="Specify the GSM band for the frequency.\nAvailable bands are: "
+-                                  + ", ".join(grgsm.arfcn.get_bands()) + "."
+-                                  + "If no band is specified, it will be determined automatically, defaulting to 0.")
++                             help="Set ARFCN instead of frequency (for PCS1900 add 0x8000 (2**15) to the ARFCN number).")
+     cfile_options.add_option("-s", "--samp-rate", dest="samp_rate", type="eng_float",
+                              default=eng_notation.num_to_str(1e6),
+                              help="Sample rate of cfile capture [default=%default]")
+@@ -347,34 +342,14 @@ if __name__ == '__main__':
+     arfcn = None
+     fc = None
+     if options.arfcn:
+-        if options.band:
+-            if options.band not in grgsm.arfcn.get_bands():
+-                parser.error("Invalid GSM band\n")
+-            elif not grgsm.arfcn.is_valid_arfcn(options.arfcn, options.band):
+-                parser.error("ARFCN is not valid in the specified band\n")
+-            else:
+-                arfcn = options.arfcn
+-                fc = grgsm.arfcn.arfcn2downlink(arfcn, options.band)
++        if not grgsm.arfcn.is_valid_arfcn(options.arfcn):
++            parser.error("ARFCN is not valid\n")
+         else:
+             arfcn = options.arfcn
+-            for band in grgsm.arfcn.get_bands():
+-                if grgsm.arfcn.is_valid_arfcn(arfcn, band):
+-                    fc = grgsm.arfcn.arfcn2downlink(arfcn, band)
+-                    break
++            fc = grgsm.arfcn.arfcn2downlink(arfcn)
+     elif options.fc:
+         fc = options.fc
+-        if options.band:
+-            if options.band not in grgsm.arfcn.get_bands():
+-                parser.error("Invalid GSM band\n")
+-            elif not grgsm.arfcn.is_valid_downlink(options.fc, options.band):
+-                parser.error("Frequency is not valid in the specified band\n")
+-            else:
+-                arfcn = grgsm.arfcn.downlink2arfcn(options.fc, options.band)
+-        else:
+-            for band in grgsm.arfcn.get_bands():
+-                if grgsm.arfcn.is_valid_downlink(options.fc, band):
+-                    arfcn = grgsm.arfcn.downlink2arfcn(options.fc, band)
+-                    break
++        arfcn = grgsm.arfcn.downlink2arfcn(options.fc)
+ 
+     # instanciate decoder
+     tb = grgsm_decoder(timeslot=options.timeslot, subslot=options.subslot, chan_mode=options.chan_mode,
 diff --git a/apps/grgsm_livemon_headless b/apps/grgsm_livemon_headless
 index dc36fca..721bc11 100644
 --- a/apps/grgsm_livemon_headless
 +++ b/apps/grgsm_livemon_headless
-@@ -1,11 +1,31 @@
- #!/usr/bin/env python2
- # -*- coding: utf-8 -*-
-+# @file
-+# @author (C) 2017 by Piotr Krysik <ptrkrysik@gmail.com>
-+# @section LICENSE
-+#
-+# Gr-gsm is free software; you can redistribute it and/or modify
-+# it under the terms of the GNU General Public License as published by
-+# the Free Software Foundation; either version 3, or (at your option)
-+# any later version.
-+#
-+# Gr-gsm is distributed in the hope that it will be useful,
-+# but WITHOUT ANY WARRANTY; without even the implied warranty of
-+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-+# GNU General Public License for more details.
-+#
-+# You should have received a copy of the GNU General Public License
-+# along with gr-gsm; see the file COPYING.  If not, write to
-+# the Free Software Foundation, Inc., 51 Franklin Street,
-+# Boston, MA 02110-1301, USA.
-+#
-+#
- ##################################################
- # GNU Radio Python Flow Graph
- # Title: Gr-gsm Livemon
- # Author: Piotr Krysik
- # Description: Interactive monitor of a single C0 channel with analysis performed by Wireshark (command to run wireshark: sudo wireshark -k -f udp -Y gsmtap -i lo)
--# Generated: Mon Aug 28 10:09:07 2017
-+# Generated: Wed Sep  6 16:27:23 2017
- ##################################################
- 
- from gnuradio import blocks
 @@ -13,6 +33,7 @@ from gnuradio import eng_notation
  from gnuradio import gr
  from gnuradio.eng_option import eng_option
@@ -241,15 +265,6 @@ diff --git a/apps/grgsm_livemon_headless.grc b/apps/grgsm_livemon_headless.grc
 index caa8e28..f130d71 100644
 --- a/apps/grgsm_livemon_headless.grc
 +++ b/apps/grgsm_livemon_headless.grc
-@@ -462,7 +462,7 @@
-     </param>
-     <param>
-       <key>value</key>
--      <value>941.8e6</value>
-+      <value>957e6</value>
-     </param>
-   </block>
-   <block>
 @@ -837,7 +837,7 @@
      </param>
      <param>
@@ -330,6 +345,196 @@ index 6547b2c..1bff63a 100755
                        help="Specify the GSM band for the frequency.\nAvailable bands are: " + bands_list)
      parser.add_option("-s", "--samp-rate", dest="samp_rate", type="float", default=2e6,
                        help="Set sample rate [default=%default] - allowed values even_number*0.2e6")
+diff --git a/apps/helpers/grgsm_capture b/apps/helpers/grgsm_capture
+index add42d3..b1b85a7 100755
+--- a/apps/helpers/grgsm_capture
++++ b/apps/helpers/grgsm_capture
+@@ -38,7 +38,7 @@ import sys
+ 
+ class grgsm_capture(gr.top_block):
+ 
+-    def __init__(self, fc, gain, samp_rate, ppm, arfcn, cfile=None, burst_file=None, band=None, verbose=False, rec_length=None, args=""):
++    def __init__(self, fc, gain, samp_rate, ppm, arfcn, cfile=None, burst_file=None, verbose=False, rec_length=None, args=""):
+ 
+         gr.top_block.__init__(self, "Gr-gsm Capture")
+                 
+@@ -52,7 +52,6 @@ class grgsm_capture(gr.top_block):
+         self.arfcn = arfcn
+         self.cfile = cfile
+         self.burst_file = burst_file
+-        self.band = band
+         self.verbose = verbose
+         self.shiftoff = shiftoff = 400e3
+         self.rec_length = rec_length
+@@ -138,13 +137,7 @@ class grgsm_capture(gr.top_block):
+         self.arfcn = arfcn
+         if self.verbose or self.burst_file:
+             self.gsm_receiver.set_cell_allocation([self.arfcn])
+-            if options.band:
+-                new_freq = grgsm.arfcn.arfcn2downlink(self.arfcn, self.band)
+-            else:
+-                for band in grgsm.arfcn.get_bands():
+-                    if grgsm.arfcn.is_valid_arfcn(arfcn, band):
+-                        new_freq = grgsm.arfcn.arfcn2downlink(arfcn, band)
+-                        break
++            new_freq = grgsm.arfcn.arfcn2downlink(self.arfcn)
+             self.set_fc(new_freq)
+ 
+     def get_gain(self):
+@@ -186,7 +179,7 @@ if __name__ == '__main__':
+                       help="Set frequency [default=%default]")
+     
+     parser.add_option("-a", "--arfcn", dest="arfcn", type="intx", 
+-                      help="Set ARFCN instead of frequency. In some cases you may have to provide the GSM band also")
++                      help="Set ARFCN instead of frequency (for PCS1900 add 0x8000 (2**15) to the ARFCN number)")
+     
+     parser.add_option("-g", "--gain", dest="gain", type="eng_float", 
+                       default=eng_notation.num_to_str(30),
+@@ -205,10 +198,6 @@ if __name__ == '__main__':
+     parser.add_option("-c", "--cfile", dest="cfile", 
+                       help="File where the captured data are saved")
+     
+-    bands_list = ", ".join(grgsm.arfcn.get_bands())
+-    parser.add_option("--band", dest="band", 
+-                      help="Specify the GSM band for the frequency.\nAvailable bands are: " + bands_list + ".\nIf no band is specified, it will be determined automatically, defaulting to 0." )
+-    
+     parser.add_option("", "--args", dest="args", type="string", default="",
+         help="Set device arguments [default=%default]")
+ 
+@@ -229,38 +218,18 @@ if __name__ == '__main__':
+     arfcn = 0
+     fc = 939.4e6
+     if options.arfcn:
+-        if options.band:
+-            if options.band not in grgsm.arfcn.get_bands():
+-                parser.error("Invalid GSM band\n")
+-            elif not grgsm.arfcn.is_valid_arfcn(options.arfcn, options.band):
+-                parser.error("ARFCN is not valid in the specified band\n")
+-            else:
+-                arfcn = options.arfcn
+-                fc = grgsm.arfcn.arfcn2downlink(arfcn, options.band)
++        if not grgsm.arfcn.is_valid_arfcn(options.arfcn):
++            parser.error("ARFCN is not valid\n")
+         else:
+             arfcn = options.arfcn
+-            for band in grgsm.arfcn.get_bands():
+-                if grgsm.arfcn.is_valid_arfcn(arfcn, band):
+-                    fc = grgsm.arfcn.arfcn2downlink(arfcn, band)
+-                    break
++            fc = grgsm.arfcn.arfcn2downlink(arfcn)
+     elif options.fc:
+         fc = options.fc
+-        if options.band:
+-            if options.band not in grgsm.arfcn.get_bands():
+-                parser.error("Invalid GSM band\n")
+-            elif not grgsm.arfcn.is_valid_downlink(options.fc, options.band):
+-                parser.error("Frequency is not valid in the specified band\n")
+-            else:
+-                arfcn = grgsm.arfcn.downlink2arfcn(options.fc, options.band)
+-        else:
+-            for band in grgsm.arfcn.get_bands():
+-                if grgsm.arfcn.is_valid_downlink(options.fc, band):
+-                    arfcn = grgsm.arfcn.downlink2arfcn(options.fc, band)
+-                    break
++        arfcn = grgsm.arfcn.downlink2arfcn(options.fc)
+      
+     tb = grgsm_capture(fc=fc, gain=options.gain, samp_rate=options.samp_rate,
+                          ppm=options.ppm, arfcn=arfcn, cfile=options.cfile, 
+-                         burst_file=options.burst_file, band=options.band, verbose=options.verbose,
++                         burst_file=options.burst_file, verbose=options.verbose,
+                          rec_length=options.rec_length, args=options.args)
+     
+     def signal_handler(signal, frame):
+diff --git a/apps/helpers/grgsm_channelize b/apps/helpers/grgsm_channelize
+index fb30334..9b00bd7 100755
+--- a/apps/helpers/grgsm_channelize
++++ b/apps/helpers/grgsm_channelize
+@@ -56,24 +56,16 @@ def eng_float(value):
+     except:
+         raise ArgumentTypeError("invalid engineering notation value: {0}".format(value))
+ 
+-def gsm_band(value):
+-    choices = arfcn.get_bands()
+-    if value in choices:
+-        return value
+-    else:
+-        raise ArgumentTypeError("invalid GSM band: {0}. Possible choices are: {1}".format(value, choices))
+-
+ class grgsm_channelize(gr.top_block):
+-    def __init__(self, channels, resamp_rate, fc, band, samp_rate, input_file, dest_dir, data_type="complex"):
++    def __init__(self, arfcns, resamp_rate, fc, samp_rate, input_file, dest_dir, data_type="complex"):
+         gr.top_block.__init__(self, "grgsm_channelize")
+ 
+         ##################################################
+         # Parameters
+         ##################################################
+-        self.channels = channels
++        self.arfcns = arfcns
+         self.resamp_rate = resamp_rate
+         self.fc = fc
+-        self.band = band
+         self.samp_rate = samp_rate
+         self.blocks_resamplers = {}
+         self.blocks_rotators = {}
+@@ -91,13 +83,10 @@ class grgsm_channelize(gr.top_block):
+             self.source = blocks.file_source(gr.sizeof_gr_complex, input_file, False)
+ 
+         fc_str = eng_notation.num_to_str(fc)
+-        print("Extracting channels %s, given that the center frequency is at %s" % (str(channels), eng_notation.num_to_str(fc)))
++        print("Extracting channels %s, given that the center frequency is at %s" % (str(arfcns), eng_notation.num_to_str(fc)))
+ 
+-        for channel in channels:
+-            channel_freq = arfcn.arfcn2downlink(channel, band)
+-            if channel_freq is None:
+-                print("Warning: invalid ARFCN %d for band %s" % (channel, band))
+-                continue
++        for channel in self.arfcns:
++            channel_freq = arfcn.arfcn2downlink(channel)
+             freq_diff = channel_freq - fc
+             freq_diff_str = "+" if 0 <= freq_diff else ""
+             freq_diff_str += eng_notation.num_to_str(freq_diff)
+@@ -115,14 +104,12 @@ class grgsm_channelize(gr.top_block):
+ 
+ if __name__ == '__main__':
+     parser = ArgumentParser(formatter_class=RawDescriptionHelpFormatter, description='Split wideband a GSM capture into seperate files per ARFCN.', add_help=True, epilog=EXTRA_HELP)
+-    parser.add_argument(dest="channel", type=int, nargs='+',
+-        help="List of ARFCNs")
++    parser.add_argument(dest="arfcns", type=int, nargs='+',
++        help="List of ARFCNs (for PCS1900 add 0x8000 (2**15) to the ARFCN number)")
+     parser.add_argument("-s", "--samp-rate", dest="samp_rate", type=eng_float, default=eng_notation.num_to_str(2e6),
+         help="Sample rate of the wideband capture file [default=%(default)s]")
+     parser.add_argument("-f", "--fc", dest="fc", type=eng_float, default=eng_notation.num_to_str(935e6), required=True,
+         help="Carrier frequency in Hz [default=%(default)s]")
+-    parser.add_argument("-b", "--band", dest="band", type=gsm_band, default='E-GSM',
+-        help="GSM band [default=%(default)s]") #TODO: add automatic discovery based on fc
+     parser.add_argument("-o", "--out-samp-rate", dest="out_samp_rate", type=eng_float, default=eng_notation.num_to_str(1e6),
+         help="Sample rate of the output capture files [default=%(default)s]")
+     parser.add_argument("-i", "--input_file", dest="input_file", type=str, required=True,
+@@ -133,7 +120,11 @@ if __name__ == '__main__':
+         help="Destination directory - if not given defaults to input file name without extension")
+         
+     args = parser.parse_args()
+-    
++
++    for ch in args.arfcns:
++        if not arfcn.is_valid_arfcn(ch):
++            parser.error("ARFCN "+str(ch)+" is not valid\n")
++
+     if not os.path.exists(args.input_file):
+         raise IOError(args.input_file + " does not exist")
+ 
+@@ -154,10 +145,9 @@ if __name__ == '__main__':
+     print("Output sample rate: " + eng_notation.num_to_str(args.out_samp_rate))
+     print("==> using resample rate of " + str(resamp_rate))
+ 
+-    tb = grgsm_channelize(channels=args.channel,
++    tb = grgsm_channelize(arfcns=args.arfcns,
+          resamp_rate=resamp_rate,
+          fc=args.fc,
+-         band=args.band,
+          samp_rate=args.samp_rate,
+          input_file=args.input_file,
+          dest_dir=args.dest_dir,         
 diff --git a/python/misc_utils/arfcn.py b/python/misc_utils/arfcn.py
 old mode 100644
 new mode 100755
@@ -556,11 +761,6 @@ index 86d379d..349e8ce
      return -1
  
  
-@@ -158,3 +179,4 @@ def get_arfcn_ranges(band):
-             arfcn_tuple = (arfcn_range[0], arfcn_range[1])
-             result.append(arfcn_tuple)
-     return result
-+
 diff --git a/python/qa_arfcn.py b/python/qa_arfcn.py
 index 1b7fb73..8fc4695 100755
 --- a/python/qa_arfcn.py
