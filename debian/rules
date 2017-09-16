@@ -22,13 +22,5 @@ override_dh_auto_install:
 override_dh_auto_test:
 	dh_auto_test --no-parallel
 
-%.1: %.rst
-	rst2man $^ > $@
-override_dh_installman: docs/grgsm_livemon.1
-	dh_installman
-	$(RM) docs/grgsm_livemon.1
-.SUFFIXES: .rst .1 .8
-
-
 debian/copyright:
 	cme update dpkg-copyright
