@@ -1,14 +1,24 @@
-Description: Do not include grgsm_setup_freedesktop in binary package
- Stop installing the grgsm_setup_freedesktop script in /usr/libexec/.
- Its only purpose is to install and uninstall the desktop file, and
- this do not belong in the installed system.
+Description: Install desktop file in correct location.
+ Correct install path for desktop file and stop installing the
+ grgsm_setup_freedesktop script in /usr/libexec/.  The only purpose of
+ the grgsm_setup_freedesktop script is to install and uninstall the
+ desktop file, and this do not belong in the installed system.
 Author: Petter Reinholdtsen <pere@hungry.com>
 Forwarded: no
 Reviewed-By: Petter Reinholdtsen <pere@hungry.com>
-Last-Update: 2017-09-02
+Last-Update: 2017-09-16
 
 --- gr-gsm-0.41.1.orig/apps/apps_data/CMakeLists.txt
 +++ gr-gsm-0.41.1/apps/apps_data/CMakeLists.txt
+@@ -22,7 +22,7 @@ set(grgsm_freedesktop_path ${GR_PKG_DATA
+ install(
+    FILES
+    grgsm-livemon.desktop
+-   DESTINATION ${grgsm_freedesktop_path}
++   DESTINATION /usr/share/applications
+    COMPONENT "gr-gsm"
+ )
+ 
 @@ -34,8 +34,4 @@ if(UNIX AND HAVE_XDG_UTILS)
          ${CMAKE_CURRENT_SOURCE_DIR}/grgsm_setup_freedesktop.in
          ${CMAKE_CURRENT_BINARY_DIR}/grgsm_setup_freedesktop
