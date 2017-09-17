@@ -1,3 +1,16 @@
+gr-gsm (0.41.1-2) unstable; urgency=medium
+
+  * Added 0000-livemon-arfcn.patch from upstream for livemon to report
+    arfcn and remove the use of 'band' command line arguments.
+  * Added 1010-rst-man-install.patch to install manual page using
+    patch proposed upstream.
+  * Updated and renamed 1000-no-libexec-script.patch to
+    1000-desktop-file-location.patch to install desktop file in the
+    correct location.
+  * Added dh-python as build depend as requested by dh_python2.
+
+ -- Petter Reinholdtsen <pere@debian.org>  Sun, 17 Sep 2017 06:57:37 +0200
+
 gr-gsm (0.41.1-1) unstable; urgency=medium
 
   * New upstream version 0.41.1 from master branch.
