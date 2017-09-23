@@ -1,3 +1,11 @@
+gr-gsm (0.41.2-1) unstable; urgency=medium
+
+  * New upstream version 0.41.2.
+  * Removed 0000-livemon-arfcn.patch and 1010-rst-man-install.patch
+    included upstream.
+
+ -- Petter Reinholdtsen <pere@debian.org>  Sun, 24 Sep 2017 00:11:12 +0200
+
 gr-gsm (0.41.1-2) unstable; urgency=medium
 
   * Added 0000-livemon-arfcn.patch from upstream for livemon to report
