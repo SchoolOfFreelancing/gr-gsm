@@ -1,0 +1,20 @@
+Description: Disable buffer change to avoid crash with HackRF
+Author: Petter Reinholdtsen <pere@debian.org>
+Origin: upstream
+Bug: https://github.com/ptrkrysik/gr-gsm/issues/336
+Forwarded: https://github.com/ptrkrysik/gr-gsm/issues/336
+Reviewed-By: Petter Reinholdtsen <pere@debian.org>
+Last-Update: 2017-10-12
+
+--- gr-gsm-0.41.2.orig/apps/grgsm_scanner
++++ gr-gsm-0.41.2/apps/grgsm_scanner
+@@ -209,7 +209,8 @@ class wideband_scanner(gr.top_block):
+         # if no file name is given process data from rtl_sdr source
+         print "Args=", args
+         self.rtlsdr_source = osmosdr.source(args="numchan=" + str(1) + " " + args)
+-        self.rtlsdr_source.set_min_output_buffer(int(sample_rate*rec_len))
++        // Enabling this line causes segfault with HackRF
++        //self.rtlsdr_source.set_min_output_buffer(int(sample_rate*rec_len))
+         self.rtlsdr_source.set_sample_rate(sample_rate)
+ 
+         # capture half of GSM channel lower than channel center (-0.1MHz)
