@@ -1,6 +1,9 @@
 Description: Make the build reproducible
 Author: Chris Lamb <lamby@debian.org>
-Last-Update: 2018-02-25
+Bug-Debian: https://bugs.debian.org/891405
+Forwarded: no
+Reviewed-By: Petter Reinholdtsen <pere@debian.org>
+Last-Update: 2018-03-20
 
 --- gr-gsm-0.41.2.orig/lib/CMakeLists.txt
 +++ gr-gsm-0.41.2/lib/CMakeLists.txt
