@@ -1,3 +1,16 @@
+gr-gsm (0.41.2-2) unstable; urgency=medium
+
+  * Add doxygen as build dependency to include documentation in package.
+  * Added 1010-hackrf-scanner.patch to stop grgsm_scanner from crashing
+    with HackRF.
+  * Added 1020-reproducible-build.patch to make build timestamp more
+    reproducible (Closes: 891405)
+  * Update Vcs links to salsa.
+  * Changed debhelper compat level from 9 to  10.
+  * Remove no longer needed --parallel from d/rules.  Thanks lintian.
+
+ -- Petter Reinholdtsen <pere@debian.org>  Wed, 21 Mar 2018 08:41:10 +0000
+
 gr-gsm (0.41.2-1) unstable; urgency=medium
 
   * New upstream version 0.41.2.
