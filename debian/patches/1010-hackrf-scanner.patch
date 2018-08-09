@@ -13,8 +13,8 @@ Last-Update: 2017-10-12
          print "Args=", args
          self.rtlsdr_source = osmosdr.source(args="numchan=" + str(1) + " " + args)
 -        self.rtlsdr_source.set_min_output_buffer(int(sample_rate*rec_len))
-+        // Enabling this line causes segfault with HackRF
-+        //self.rtlsdr_source.set_min_output_buffer(int(sample_rate*rec_len))
++        # Enabling this line causes segfault with HackRF
++        #self.rtlsdr_source.set_min_output_buffer(int(sample_rate*rec_len))
          self.rtlsdr_source.set_sample_rate(sample_rate)
  
          # capture half of GSM channel lower than channel center (-0.1MHz)
