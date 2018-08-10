@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: gr-gsm
 Upstream-Contact: Piotr Krysik <ptrkrysik@gmail.com>
-Source: http://github.com/ptrkrysik/gr-gsm/
+Source: https://git.osmocom.org/gr-gsm
 
 Files: *
 Copyright: 2009-2017, Piotr Krysik <ptrkrysik@gmail.com>
