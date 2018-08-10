@@ -6,7 +6,7 @@ The aim is to provide set of tools for receiving information transmitted by GSM 
 
 Installation and usage
 ======================
-Please see project's wiki https://github.com/ptrkrysik/gr-gsm/wiki for information on [installation](https://github.com/ptrkrysik/gr-gsm/wiki/Installation) and [usage](https://github.com/ptrkrysik/gr-gsm/wiki/Usage) of gr-gsm.
+Please see project's [wiki](https://osmocom.org/projects/gr-gsm/wiki/index) for information on [installation](https://osmocom.org/projects/gr-gsm/wiki/Installation) and [usage](https://github.com/ptrkrysik/gr-gsm/wiki/Usage) of gr-gsm.
 
 Mailing list
 ============
@@ -20,9 +20,9 @@ Mailing list is a place for general discussions, questions about the usage and i
 - version of gnuradio (it can be obtained with: gnuradio-companion --version)
 - error messages (in case of pybombs installation they can be obtained after switching it to verbous mode with -v option).
 
-To join the group with any e-mail addres (google account is not required) use this link:
+To join the group with any e-mail address, use this link:
 
-https://groups.google.com/forum/#!forum/gr-gsm/join
+<https://groups.google.com/forum/#!forum/gr-gsm/join>
 
 Development
 ===========
@@ -34,13 +34,17 @@ Videos
 ======
 Short presentation of *Airprobe*'like application of *gr-gsm*:
 
-https://www.youtube.com/watch?v=Eofnb7zr8QE
+<https://www.youtube.com/watch?v=Eofnb7zr8QE>
 
 Credits
 =======
 *Piotr Krysik* \<ptrkrysik (at) gmail.com\> - main author and project maintainer
 
 *Roman Khassraf* \<rkhassraf (at) gmail.com\> - blocks for demultiplexing and decoding of voice channels,  decryption block supporting all ciphers used in GSM, blocks for storing and reading GSM bursts, project planning and user support
+
+*Vadim Yanitskiy* \<axilirator (at) gmail.com\> - control and data interface for the transceiver, grgsm_trx application
+
+*Vasil Velichkov* \<vvvelichkov (at) gmail.com\> - automatic compilation of grc applications, fixes and user support
 
 *Pieter Robyns* \<pieter.robyns (at) uhasselt.be\> - block reversing channel hopping
 
