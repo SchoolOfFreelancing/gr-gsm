@@ -1,3 +1,10 @@
+gr-gsm (0.42.1-2) unstable; urgency=medium
+
+  * Update build depend list based on pacages in Debian_testing.docker to
+    fix build failure.
+
+ -- Petter Reinholdtsen <pere@debian.org>  Sat, 11 Aug 2018 13:55:50 +0200
+
 gr-gsm (0.42.1-1) unstable; urgency=medium
 
   * New upstream version 0.42.1
