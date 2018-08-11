@@ -1,3 +1,15 @@
+gr-gsm (0.42.1-1) unstable; urgency=medium
+
+  * New upstream version 0.42.1
+   - Fixes python import problem (Closes: #890914)
+  * New upstream URL.  Updated d/control and d/copyright.
+  * Updated watch file to use new upstream location.
+  * Removed 1010-hackrf-scanner.patch now applied upstream.
+  * Updated Standards-Version from 4.1.0 to 4.1.4.
+  * Added 0000-soname-0-42-1.patch from upstream to correct library soname.
+
+ -- Petter Reinholdtsen <pere@debian.org>  Sat, 11 Aug 2018 05:10:02 +0000
+
 gr-gsm (0.41.2-2) unstable; urgency=medium
 
   * Add doxygen as build dependency to include documentation in package.
