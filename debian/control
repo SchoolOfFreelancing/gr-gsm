@@ -8,12 +8,16 @@ Build-Depends: cmake,
                debhelper (>= 10~),
                dh-python,
                doxygen,
-               python3-docutils,
+               python-docutils,
                gnuradio-dev,
                libosmocore-dev,
+               gr-osmosdr,
                pkg-config,
                python-dev,
                python-scipy,
+               python-gtk2,
+               libcppunit-dev,
+               liblog4cpp5-dev,
                swig
 X-Python-Version: >= 2.7, << 2.8
 Standards-Version: 4.1.4
