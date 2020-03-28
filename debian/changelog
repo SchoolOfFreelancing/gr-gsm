@@ -1,3 +1,11 @@
+gr-gsm (0.42.2.20200214-1) unstable; urgency=medium
+
+  * New upstream (fd4454d on porting_to_gr38 branch)
+  * build with gnuradio 3.8, Python3 (Closes: #936658, #940068)
+  * Changed Standards-Version from 4.5.0.
+
+ -- A. Maitland Bottoms <bottoms@debian.org>  Sat, 28 Mar 2020 13:08:44 -0400
+
 gr-gsm (0.42.2-1) unstable; urgency=medium
 
   * New upstream version 0.42.2.

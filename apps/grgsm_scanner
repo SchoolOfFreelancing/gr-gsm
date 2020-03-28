@@ -36,13 +36,13 @@ import os
 import osmosdr
 import pmt
 import time
-
+import sys
 
 # from wideband_receiver import *
 
-class receiver_with_decoder(grgsm.hier_block):
+class receiver_with_decoder(gr.hier_block2):
     def __init__(self, OSR=4, chan_num=0, fc=939.4e6, ppm=0, samp_rate=0.2e6):
-        grgsm.hier_block.__init__(
+        gr.hier_block2.__init__(
             self, "Receiver With Decoder",
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
             gr.io_signature(0, 0, 0),
@@ -132,9 +132,9 @@ class receiver_with_decoder(grgsm.hier_block):
         self.samp_rate_out = samp_rate_out
 
 
-class wideband_receiver(grgsm.hier_block):
+class wideband_receiver(gr.hier_block2):
     def __init__(self, OSR=4, fc=939.4e6, samp_rate=0.4e6):
-        grgsm.hier_block.__init__(
+        gr.hier_block2.__init__(
             self, "Wideband receiver",
             gr.io_signature(1, 1, gr.sizeof_gr_complex * 1),
             gr.io_signature(0, 0, 0),
@@ -168,14 +168,14 @@ class wideband_receiver(grgsm.hier_block):
         # Connections
         ##################################################
         self.connect((self, 0), (self.pfb_channelizer_ccf_0, 0))
-        for chan in xrange(0, self.channels_num):
+        for chan in range(0, self.channels_num):
             self.connect((self.pfb_channelizer_ccf_0, chan), (self.receivers_with_decoders[chan], 0))
             self.msg_connect(self.receivers_with_decoders[chan], 'bursts', self, 'bursts')
             self.msg_connect(self.receivers_with_decoders[chan], 'msgs', self, 'msgs')
 
     def create_receivers(self):
         self.receivers_with_decoders = {}
-        for chan in xrange(0, self.channels_num):
+        for chan in range(0, self.channels_num):
             self.receivers_with_decoders[chan] = receiver_with_decoder(fc=self.fc, OSR=self.OSR, chan_num=chan,
                                                                        samp_rate=self.OSR_PFB * 0.2e6)
 
@@ -207,8 +207,9 @@ class wideband_scanner(gr.top_block):
         self.ppm = ppm
 
         # if no file name is given process data from rtl_sdr source
-        print "Args=", args
-        self.rtlsdr_source = osmosdr.source(args="numchan=" + str(1) + " " + args)
+        print("Args=", args)
+        self.rtlsdr_source = osmosdr.source(args="numchan=" + str(1) + " " +
+                str(grgsm.device.get_default_args(args)))
         #self.rtlsdr_source.set_min_output_buffer(int(sample_rate*rec_len)) #this line causes segfaults on HackRF
         self.rtlsdr_source.set_sample_rate(sample_rate)
 
@@ -260,6 +261,10 @@ class channel_info(object):
         self.neighbours = neighbours
         self.cell_arfcns = cell_arfcns
 
+    def __lt__(self, other):
+        return self.arfcn < other.arfcn
+
+
     def get_verbose_info(self):
         i = "  |---- Configuration: %s\n" % self.get_ccch_conf()
         i += "  |---- Cell ARFCNs: " + ", ".join(map(str, self.cell_arfcns)) + "\n"
@@ -297,7 +302,7 @@ class channel_info(object):
         return "ARFCN: %4u, Freq: %6.1fM, CID: %5u, LAC: %5u, MCC: %3u, MNC: %3u, Pwr: %3i" % (
             self.arfcn, self.freq / 1e6, self.cid, self.lac, self.mcc, self.mnc, self.power)
 
-def do_scan(samp_rate, band, speed, ppm, gain, args, prn = None):
+def do_scan(samp_rate, band, speed, ppm, gain, args, prn = None, debug = False):
     signallist = []
     channels_num = int(samp_rate / 0.2e6)
     for arfcn_range in grgsm.arfcn.get_arfcn_ranges(band):
@@ -311,14 +316,15 @@ def do_scan(samp_rate, band, speed, ppm, gain, args, prn = None):
 
         while current_freq < stop_freq:
 
-            # silence rtl_sdr output:
-            # open 2 fds
-            null_fds = [os.open(os.devnull, os.O_RDWR) for x in xrange(2)]
-            # save the current file descriptors to a tuple
-            save = os.dup(1), os.dup(2)
-            # put /dev/null fds on 1 and 2
-            os.dup2(null_fds[0], 1)
-            os.dup2(null_fds[1], 2)
+            if not debug:
+                # silence rtl_sdr output:
+                # open 2 fds
+                null_fds = [os.open(os.devnull, os.O_RDWR) for x in range(2)]
+                # save the current file descriptors to a tuple
+                save = os.dup(1), os.dup(2)
+                # put /dev/null fds on 1 and 2
+                os.dup2(null_fds[0], 1)
+                os.dup2(null_fds[1], 2)
 
             # instantiate scanner and processor
             scanner = wideband_scanner(rec_len=6 - speed,
@@ -359,12 +365,14 @@ def do_scan(samp_rate, band, speed, ppm, gain, args, prn = None):
 
             scanner = None
 
-            # restore file descriptors so we can print the results
-            os.dup2(save[0], 1)
-            os.dup2(save[1], 2)
-            # close the temporary fds
-            os.close(null_fds[0])
-            os.close(null_fds[1])
+
+            if not debug:
+                # restore file descriptors so we can print the results
+                os.dup2(save[0], 1)
+                os.dup2(save[1], 2)
+                # close the temporary fds
+                os.close(null_fds[0])
+                os.close(null_fds[1])
             if prn:
                 prn(found_list)
             signallist.extend(found_list)
@@ -384,11 +392,16 @@ def argument_parser():
     parser.add_option("-g", "--gain", dest="gain", type="eng_float", default=24.0,
                       help="Set gain [default=%default]")
     parser.add_option("", "--args", dest="args", type="string", default="",
-                      help="Set device arguments [default=%default]")
+                      help="Set device arguments [default=%default]."
+                      " Use --list-devices the view the available devices")
+    parser.add_option("-l", "--list-devices", action="store_true",
+                      help="List available SDR devices, use --args to specify hints")
     parser.add_option("--speed", dest="speed", type="intx", default=4,
                       help="Scan speed [default=%default]. Value range 0-5.")
     parser.add_option("-v", "--verbose", action="store_true",
                       help="If set, verbose information output is printed: ccch configuration, cell ARFCN's, neighbour ARFCN's")
+    parser.add_option("-d", "--debug", action="store_true",
+                      help="Print additional debug messages")
 
     """
         Dont forget: sudo sysctl kernel.shmmni=32000
@@ -398,6 +411,10 @@ def argument_parser():
 def main(options = None):
     if options is None:
         (options, args) = argument_parser().parse_args()
+
+    if options.list_devices:
+        grgsm.device.print_devices(options.args)
+        sys.exit(0)
 
     if options.band not in grgsm.arfcn.get_bands():
         parser.error("Invalid GSM band\n")
@@ -410,12 +427,12 @@ def main(options = None):
 
     def printfunc(found_list):
         for info in sorted(found_list):
-            print info
+            print(info)
             if options.verbose:
-                print info.get_verbose_info()
-    print ""
+                print(info.get_verbose_info())
+    print("")
     do_scan(options.samp_rate, options.band, options.speed,
-            options.ppm, options.gain, options.args, prn = printfunc)
+            options.ppm, options.gain, options.args, prn = printfunc, debug = options.debug)
 
 if __name__ == '__main__':
     main()

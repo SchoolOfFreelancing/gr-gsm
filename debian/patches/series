@@ -1,2 +1,3 @@
 1000-desktop-file-location.patch
 1020-reproducible-build.patch
+2000-ungit-soname

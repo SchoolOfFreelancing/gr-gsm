@@ -3,15 +3,15 @@ Author: Chris Lamb <lamby@debian.org>
 Bug-Debian: https://bugs.debian.org/891405
 Forwarded: no
 Reviewed-By: Petter Reinholdtsen <pere@debian.org>
-Last-Update: 2018-03-20
+Last-Update: 2020-03-28
 
---- gr-gsm-0.41.2.orig/lib/CMakeLists.txt
-+++ gr-gsm-0.41.2/lib/CMakeLists.txt
-@@ -44,7 +44,7 @@ endmacro()
+--- a/lib/CMakeLists.txt
++++ b/lib/CMakeLists.txt
+@@ -47,7 +47,7 @@
  # Handle the generated constants
  ########################################################################
  execute_process(COMMAND ${PYTHON_EXECUTABLE} -c
--    "import time;print time.strftime('%a, %d %b %Y %H:%M:%S', time.gmtime())"
+-    "import time;print(time.strftime('%a, %d %b %Y %H:%M:%S', time.gmtime()))"
 +    "import os,time,datetime; print datetime.datetime.utcfromtimestamp(int(os.environ.get('SOURCE_DATE_EPOCH', time.time()))).strftime('%a, %d %b %Y %H:%M:%S')"
      OUTPUT_VARIABLE BUILD_DATE OUTPUT_STRIP_TRAILING_WHITESPACE
  )

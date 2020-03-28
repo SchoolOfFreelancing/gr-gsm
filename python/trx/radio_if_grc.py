@@ -8,7 +8,7 @@
 # Generated: Fri Dec  1 10:49:25 2017
 ##################################################
 
-from change_sign_of_dict_elements import change_sign_of_dict_elements
+from dict_toggle_sign import dict_toggle_sign
 from gnuradio import blocks
 from gnuradio import digital
 from gnuradio import eng_notation
@@ -24,7 +24,7 @@ import math
 import time
 
 
-class radio_if_grc(gr.top_block):
+class RadioInterfaceGRC(gr.top_block):
 
     def __init__(self, delay_correction=285.616e-6, osr=4, ppm=-0.799427, rx_freq=935e6+36*0.2e6, rx_gain=40, samp_rate=13e6/12.0, timing_advance=0, trx_base_port="5710", trx_remote_addr="127.0.0.1", tx_freq=935e6+36*0.2e6-45e6, tx_gain=40, uplink_shift=-(6.0/1625000*(156.25)*3)):
         gr.top_block.__init__(self, "Trx radio interface")
@@ -94,16 +94,16 @@ class radio_if_grc(gr.top_block):
         self.gsm_burst_type_filter_0 = grgsm.burst_type_filter(([3]))
         self.gsm_burst_to_fn_time_0 = grgsm.burst_to_fn_time()
         self.digital_burst_shaper_xx_0 = digital.burst_shaper_cc((firdes.window(firdes.WIN_HANN, 16, 0)), 0, 20, False, "packet_len")
-        self.change_sign_of_dict_elements = change_sign_of_dict_elements()
+        self.dict_toggle_sign = dict_toggle_sign()
         self.blocks_pdu_to_tagged_stream_0_0 = blocks.pdu_to_tagged_stream(blocks.byte_t, "packet_len")
 
         ##################################################
         # Connections
         ##################################################
-        self.msg_connect((self.change_sign_of_dict_elements, 'dict_out'), (self.gsm_msg_to_tag_0_0, 'msg'))    
+        self.msg_connect((self.dict_toggle_sign, 'dict_out'), (self.gsm_msg_to_tag_0_0, 'msg'))
         self.msg_connect((self.gsm_burst_to_fn_time_0, 'fn_time_out'), (self.gsm_txtime_setter_0, 'fn_time'))    
         self.msg_connect((self.gsm_burst_type_filter_0, 'bursts_out'), (self.gsm_burst_to_fn_time_0, 'bursts_in'))    
-        self.msg_connect((self.gsm_clock_offset_control_0, 'ctrl'), (self.change_sign_of_dict_elements, 'dict_in'))    
+        self.msg_connect((self.gsm_clock_offset_control_0, 'ctrl'), (self.dict_toggle_sign, 'dict_in'))
         self.msg_connect((self.gsm_clock_offset_control_0, 'ctrl'), (self.gsm_msg_to_tag_0, 'msg'))    
         self.msg_connect((self.gsm_preprocess_tx_burst_0, 'bursts_out'), (self.blocks_pdu_to_tagged_stream_0_0, 'pdus'))    
         self.msg_connect((self.gsm_receiver_0, 'C0'), (self.gsm_burst_type_filter_0, 'bursts_in'))    
@@ -255,7 +255,7 @@ def argument_parser():
     return parser
 
 
-def main(top_block_cls=radio_if_grc, options=None):
+def main(top_block_cls=RadioInterfaceGRC, options=None):
     if options is None:
         options, _ = argument_parser().parse_args()
 

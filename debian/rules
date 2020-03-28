@@ -4,14 +4,15 @@ DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 export DEB_HOST_MULTIARCH
 
 %:
-	dh $@ --with python2
+	HOME=$(CURDIR)/debian/tmp dh $@ --with python3
 
 override_dh_auto_configure:
-	dh_auto_configure -- -DLIB_SUFFIX="/$(DEB_HOST_MULTIARCH)" -DPythonLibs_FIND_VERSION:STRING="2.7" -DPYTHON_EXECUTABLE:STRING="/usr/bin/python"
+	dh_auto_configure -- -DLIB_SUFFIX="/$(DEB_HOST_MULTIARCH)" -DPYTHON_EXECUTABLE:STRING="/usr/bin/python3"
 
 override_dh_auto_install:
 	dh_auto_install
-	rm -f debian/gr-gsm/usr/lib/python2.7/dist-packages/grgsm/*py[co]
+	rm -f debian/gr-gsm/usr/lib/python3/dist-packages/grgsm/*py[co]
+	rm -f debian/gr-gsm/usr/lib/python3/dist-packages/grgsm/trx/*py[co]
 	# This file is fetched from libjs-jquery instead, see gr-gsm.links
 	rm -f debian/gr-gsm/usr/share/doc/gr-gsm/html/jquery.js
 	# Deter anyone from using the shared library directly

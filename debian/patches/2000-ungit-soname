@@ -1,0 +1,11 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -45,7 +45,7 @@
+ set(VERSION_MAJOR 1)
+ set(VERSION_API    0)
+ set(VERSION_ABI 0)
+-set(VERSION_PATCH git)
++set(VERSION_PATCH "")
+ 
+ cmake_policy(SET CMP0011 NEW)
+ 

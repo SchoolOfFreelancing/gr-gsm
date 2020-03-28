@@ -23,9 +23,11 @@ GR_PYTHON_INSTALL(
     udp_link.py
     ctrl_if.py
     ctrl_if_bb.py
-    fake_pm.py
     radio_if.py
+    radio_if_uhd.py
+    radio_if_lms.py
     radio_if_grc.py
-    change_sign_of_dict_elements.py
+    transceiver.py
+    dict_toggle_sign.py
     DESTINATION ${GR_PYTHON_DIR}/grgsm/trx
 )

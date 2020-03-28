@@ -41,7 +41,8 @@ namespace gr {
         TCH_AFS5_15,
         TCH_AFS4_75,
         TCH_FS,
-        TCH_EFR
+        TCH_EFR,
+        TCH_HS,
     };
 
     /*!
