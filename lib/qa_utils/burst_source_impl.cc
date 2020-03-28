@@ -31,8 +31,6 @@
 #include <grgsm/gsmtap.h>
 #include <grgsm/endian.h>
 
-#define PMT_SIZE 174
-
 namespace gr {
   namespace gsm {
 
@@ -54,7 +52,8 @@ namespace gr {
       : gr::block("burst_source",
               gr::io_signature::make(0, 0, 0),
               gr::io_signature::make(0, 0, 0)),
-              d_finished(false)
+              d_finished(false),
+              d_arfcn(0)
     {
         message_port_register_out(pmt::mp("out"));
         set_framenumbers(framenumbers);
@@ -87,6 +86,11 @@ namespace gr {
         d_burst_data = burst_data;
     }
 
+    void burst_source_impl::set_arfcn(uint16_t arfcn)
+    {
+        d_arfcn = arfcn;
+    }
+
     bool burst_source_impl::start()
     {
         d_finished = false;
@@ -110,8 +114,6 @@ namespace gr {
 
     void burst_source_impl::run()
     {
-        char *unserialized = (char*)malloc(sizeof(char) * PMT_SIZE);
-
         for (int i=0; i<d_burst_data.size(); i++)
         {
             if (d_burst_data[i].length() == BURST_SIZE &&
@@ -126,7 +128,7 @@ namespace gr {
                 tap_header->timeslot = d_timeslots[i];
                 tap_header->frame_number = htobe32(d_framenumbers[i]);
                 tap_header->sub_type = GSMTAP_BURST_NORMAL;
-                tap_header->arfcn = 0;
+                tap_header->arfcn = d_arfcn;
                 tap_header->signal_dbm = 0;
                 tap_header->snr_db = 0;
 

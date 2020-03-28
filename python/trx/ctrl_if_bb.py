@@ -4,7 +4,7 @@
 # GR-GSM based transceiver
 # CTRL interface for OsmocomBB
 #
-# (C) 2016-2017 by Vadim Yanitskiy <axilirator@gmail.com>
+# (C) 2016-2019 by Vadim Yanitskiy <axilirator@gmail.com>
 #
 # All Rights Reserved
 #
@@ -22,47 +22,32 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-import grgsm
-from ctrl_if import ctrl_if
+from .ctrl_if import CTRLInterface
 
-class ctrl_if_bb(ctrl_if):
-	def __init__(self, remote_addr, remote_port, bind_addr, bind_port, tb, pm):
-		ctrl_if.__init__(self, remote_addr, remote_port,
-			bind_addr, bind_port)
-
+class CTRLInterfaceBB(CTRLInterface):
+	def __init__(self, trx, *ctrl_if_args):
+		CTRLInterface.__init__(self, *ctrl_if_args)
 		print("[i] Init CTRL interface (%s)" % self.desc_link())
 
-		# Set link to the follow graph (top block)
-		self.tb = tb
-		# Power measurement
-		self.pm = pm
+		# Transceiver instance we belong to
+		self.trx = trx
 
 	def parse_cmd(self, request):
 		# Power control
 		if self.verify_cmd(request, "POWERON", 0):
 			print("[i] Recv POWERON CMD")
 
-			# Ensure transceiver isn't working
-			if self.tb.trx_started:
-				print("[!] Transceiver already started")
+			# Start transceiver
+			if not self.trx.start():
 				return -1
-
-			print("[i] Starting transceiver...")
-			self.tb.trx_started = True
-			self.tb.start()
 
 			return 0
 
 		elif self.verify_cmd(request, "POWEROFF", 0):
 			print("[i] Recv POWEROFF cmd")
 
-			# TODO: flush all buffers between blocks
-			if self.tb.trx_started:
-				print("[i] Stopping transceiver...")
-				self.tb.trx_started = False
-				self.tb.set_ta(0)
-				self.tb.stop()
-				self.tb.wait()
+			# Stop transceiver
+			self.trx.stop()
 
 			return 0
 
@@ -72,7 +57,7 @@ class ctrl_if_bb(ctrl_if):
 
 			# TODO: check gain value
 			gain = int(request[1])
-			self.tb.set_rx_gain(gain)
+			self.trx.radio_if.set_rx_gain(gain)
 
 			return 0
 
@@ -81,7 +66,7 @@ class ctrl_if_bb(ctrl_if):
 
 			# TODO: check gain value
 			gain = int(request[1])
-			self.tb.set_tx_gain(gain)
+			self.trx.radio_if.set_tx_gain(gain)
 
 			return 0
 
@@ -91,7 +76,7 @@ class ctrl_if_bb(ctrl_if):
 
 			# TODO: check freq range
 			freq = int(request[1]) * 1000
-			self.tb.set_rx_freq(freq)
+			self.trx.radio_if.set_rx_freq(freq)
 
 			return 0
 
@@ -100,7 +85,7 @@ class ctrl_if_bb(ctrl_if):
 
 			# TODO: check freq range
 			freq = int(request[1]) * 1000
-			self.tb.set_tx_freq(freq)
+			self.trx.radio_if.set_tx_freq(freq)
 
 			return 0
 
@@ -114,19 +99,12 @@ class ctrl_if_bb(ctrl_if):
 				print("[!] TS index should be in range: 0..7")
 				return -1
 
-			# Ignore timeslot type for now
+			# Channel combination number (see GSM TS 05.02)
+			# TODO: check this value
 			config = int(request[2])
-			print("[i] Configure timeslot filter to: %s"
-				% ("drop all" if config == 0 else "TS %d" % tn))
 
-			if config == 0:
-				# Value 0 means 'drop all'
-				self.tb.ts_filter.set_policy(
-					grgsm.FILTER_POLICY_DROP_ALL)
-			else:
-				self.tb.ts_filter.set_policy(
-					grgsm.FILTER_POLICY_DEFAULT)
-				self.tb.ts_filter.set_tn(tn)
+			# TODO: check return value
+			self.trx.radio_if.set_slot(tn, config)
 
 			return 0
 
@@ -136,12 +114,11 @@ class ctrl_if_bb(ctrl_if):
 
 			# TODO: check freq range
 			meas_freq = int(request[1]) * 1000
+			meas_dbm = self.trx.measure(meas_freq)
+			if meas_dbm is None:
+				return -1
 
-			# HACK: send fake low power values
-			# until actual power measurement is implemented
-			meas_dbm = str(self.pm.measure(meas_freq))
-
-			return (0, [meas_dbm])
+			return (0, [str(meas_dbm)])
 
 		# Timing Advance control
 		elif self.verify_cmd(request, "SETTA", 1):
@@ -153,7 +130,7 @@ class ctrl_if_bb(ctrl_if):
 				print("[!] TA value must be in range: 0..63")
 				return -1
 
-			self.tb.set_ta(ta)
+			self.trx.radio_if.set_ta(ta)
 			return 0
 
 		# Misc
