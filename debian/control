@@ -5,7 +5,7 @@ Maintainer: Debian Hamradio Maintainers <debian-hams@lists.debian.org>
 Uploaders: Petter Reinholdtsen <pere@debian.org>,
            A. Maitland Bottoms <bottoms@debian.org>
 Build-Depends: cmake,
-               debhelper (>= 12~),
+               debhelper-compat (= 12),
                dh-python,
                doxygen,
                python3-docutils,
