@@ -1,3 +1,10 @@
+gr-gsm (0.42.2.20200214-2) UNRELEASED; urgency=low
+
+  * Bump debhelper from old 10 to 12.
+  * Set debhelper-compat version in Build-Depends.
+
+ -- Debian Janitor <janitor@jelmer.uk>  Mon, 27 Jul 2020 08:26:49 -0000
+
 gr-gsm (0.42.2.20200214-1) unstable; urgency=medium
 
   * New upstream (fd4454d on porting_to_gr38 branch)
