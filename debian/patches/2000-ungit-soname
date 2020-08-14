@@ -1,3 +1,10 @@
+Description: Remove 'git' from library version
+ FIXME descriebe why
+Author: A. Maitland Bottoms <bottoms@debian.org>
+Forwarded: no
+Reviewed-By: A. Maitland Bottoms <bottoms@debian.org>
+Last-Update: 2020-03-28
+
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -45,7 +45,7 @@
