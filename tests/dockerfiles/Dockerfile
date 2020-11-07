@@ -1,5 +1,9 @@
-FROM ubuntu:18.04
-MAINTAINER Vasil Velichkov
+FROM ubuntu:20.04
+
+ENV BRANCH 2.2
+ENV RSTUDIO 1.3.959
+
+ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
         software-properties-common && \
